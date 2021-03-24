@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_annotation_value
+    - node.type.annotation_textualbody
+  enforced:
+    module:
+      - recogito_integration
+id: node.annotation_textualbody.field_annotation_value
+field_name: field_annotation_value
+entity_type: node
+bundle: annotation_textualbody
+label: 'Annotation Value'
+description: 'The text chosen to be stored in this TextualBody.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string_long

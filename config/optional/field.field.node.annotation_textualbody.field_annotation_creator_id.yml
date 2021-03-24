@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_annotation_creator_id
+    - node.type.annotation_textualbody
+  enforced:
+    module:
+      - recogito_integration
+id: node.annotation_textualbody.field_annotation_creator_id
+field_name: field_annotation_creator_id
+entity_type: node
+bundle: annotation_textualbody
+label: 'Annotation Creator ID'
+description: 'The link to the TextualBody creator''s page on this site.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string_long

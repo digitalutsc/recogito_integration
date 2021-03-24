@@ -1,0 +1,30 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_annotation_textualbodies
+    - node.type.annotation
+    - node.type.annotation_textualbody
+  enforced:
+    module:
+      - recogito_integration
+id: node.annotation.field_annotation_textualbodies
+field_name: field_annotation_textualbodies
+entity_type: node
+bundle: annotation
+label: 'Annotation TextualBodies'
+description: 'An entity reference to each TextualBody stored in this annotation.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:node'
+  handler_settings:
+    target_bundles:
+      annotation_textualbody: annotation_textualbody
+    sort:
+      field: _none
+    auto_create: false
+    auto_create_bundle: ''
+field_type: entity_reference

@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_annotation_purpose
+    - node.type.annotation_textualbody
+  enforced:
+    module:
+      - recogito_integration
+id: node.annotation_textualbody.field_annotation_purpose
+field_name: field_annotation_purpose
+entity_type: node
+bundle: annotation_textualbody
+label: 'Annotation Purpose'
+description: 'The purpose for the creation of this TextualBody.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string_long

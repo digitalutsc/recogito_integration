@@ -1,0 +1,13 @@
+recogito_injection:
+  version: 1.x
+  css:
+    state:
+      css/recogito.min.css: {}
+  js:
+    js/recogito.min.js: {}
+    js/injector.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+    - core/drupal.ajax

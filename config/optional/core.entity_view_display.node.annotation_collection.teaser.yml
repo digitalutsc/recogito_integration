@@ -1,0 +1,33 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - core.entity_view_mode.node.teaser
+    - field.field.node.annotation_collection.field_annotation_reference
+    - node.type.annotation_collection
+  enforced:
+    module:
+      - recogito_integration
+  module:
+    - user
+id: node.annotation_collection.teaser
+targetEntityType: node
+bundle: annotation_collection
+mode: teaser
+content:
+  field_annotation_reference:
+    type: entity_reference_label
+    weight: 0
+    region: content
+    label: inline
+    settings:
+      link: true
+    third_party_settings: {  }
+  links:
+    weight: 1
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+hidden:
+  langcode: true
+  search_api_excerpt: true
