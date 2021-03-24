@@ -1,1 +1,0 @@
-Recogito Text Annotation Integration
