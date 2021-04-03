@@ -103,7 +103,7 @@ function select_annotation(a) {
           }
         } else {
           if (!perms['recogito edit annotations'] && !perms['recogito delete annotations']) {
-            jQuery(this).find('.r6o-arrow-down').remove();
+            jQuery(this).find('.r6o-arrow-down').hide();
           } else if (!perms['recogito edit annotations'] || !perms['recogito delete annotations']) {
             jQuery(this).click(function(e) {
               if (!perms['recogito edit annotations']) {
