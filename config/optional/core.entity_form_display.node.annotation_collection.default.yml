@@ -2,13 +2,13 @@ langcode: en
 status: true
 dependencies:
   config:
+    - field.field.node.annotation_collection.field_annotation_collection_url
     - field.field.node.annotation_collection.field_annotation_reference
     - node.type.annotation_collection
   enforced:
     module:
       - recogito_integration
   module:
-    - content_moderation
     - path
 id: node.annotation_collection.default
 targetEntityType: node
@@ -21,6 +21,14 @@ content:
     region: content
     settings: {  }
     third_party_settings: {  }
+  field_annotation_collection_url:
+    weight: 122
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: {  }
+    type: string_textarea
+    region: content
   field_annotation_reference:
     weight: 121
     settings:

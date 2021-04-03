@@ -3,6 +3,7 @@ use Drupal\taxonomy\Entity\Term;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
 
+
 function recogito_integration_page_attachments(array &$attachments) {
   if (!\Drupal::service('router.admin_context')->isAdminRoute()) {
 
@@ -36,6 +37,7 @@ function recogito_integration_page_attachments(array &$attachments) {
     $attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_type'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_type');
     $attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_name'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name');
 
+    $attachments['#attached']['library'][] = 'openseadragon/init';
     $attachments['#attached']['library'][] = 'recogito_integration/recogito_injection';
 
     return $attachments;

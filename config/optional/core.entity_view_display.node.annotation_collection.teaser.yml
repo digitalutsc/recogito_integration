@@ -3,6 +3,7 @@ status: true
 dependencies:
   config:
     - core.entity_view_mode.node.teaser
+    - field.field.node.annotation_collection.field_annotation_collection_url
     - field.field.node.annotation_collection.field_annotation_reference
     - node.type.annotation_collection
   enforced:
@@ -29,5 +30,6 @@ content:
     settings: {  }
     third_party_settings: {  }
 hidden:
+  field_annotation_collection_url: true
   langcode: true
   search_api_excerpt: true

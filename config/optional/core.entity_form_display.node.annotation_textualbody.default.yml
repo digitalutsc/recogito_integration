@@ -14,7 +14,6 @@ dependencies:
     module:
       - recogito_integration
   module:
-    - content_moderation
     - path
 id: node.annotation_textualbody.default
 targetEntityType: node

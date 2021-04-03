@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_annotation_image_value
+    - node.type.annotation
+  enforced:
+    module:
+      - recogito_integration
+id: node.annotation.field_annotation_image_value
+field_name: field_annotation_image_value
+entity_type: node
+bundle: annotation
+label: 'Annotation Image Value'
+description: 'For image annotations, the selection made on the image.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string_long

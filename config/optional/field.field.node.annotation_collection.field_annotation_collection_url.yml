@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_annotation_collection_url
+    - node.type.annotation_collection
+  enforced:
+    module:
+      - recogito_integration
+id: node.annotation_collection.field_annotation_collection_url
+field_name: field_annotation_collection_url
+entity_type: node
+bundle: annotation_collection
+label: 'Annotation Collection Url'
+description: 'The subdomain of the page containing the annotation collection on this site.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string_long

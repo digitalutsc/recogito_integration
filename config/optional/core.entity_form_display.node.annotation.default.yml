@@ -3,17 +3,19 @@ status: true
 dependencies:
   config:
     - field.field.node.annotation.field_annotation_id
+    - field.field.node.annotation.field_annotation_image_source
+    - field.field.node.annotation.field_annotation_image_value
     - field.field.node.annotation.field_annotation_page
     - field.field.node.annotation.field_annotation_target_end
     - field.field.node.annotation.field_annotation_target_exact
     - field.field.node.annotation.field_annotation_target_start
     - field.field.node.annotation.field_annotation_textualbodies
+    - field.field.node.annotation.field_annotation_type
     - node.type.annotation
   enforced:
     module:
       - recogito_integration
   module:
-    - content_moderation
     - path
 id: node.annotation.default
 targetEntityType: node
@@ -28,6 +30,22 @@ content:
     third_party_settings: {  }
   field_annotation_id:
     weight: 126
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: {  }
+    type: string_textarea
+    region: content
+  field_annotation_image_source:
+    weight: 131
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: {  }
+    type: string_textarea
+    region: content
+  field_annotation_image_value:
+    weight: 130
     settings:
       rows: 5
       placeholder: ''
@@ -75,6 +93,14 @@ content:
       placeholder: ''
     third_party_settings: {  }
     type: entity_reference_autocomplete
+    region: content
+  field_annotation_type:
+    weight: 129
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+    type: string_textfield
     region: content
   langcode:
     type: language_select

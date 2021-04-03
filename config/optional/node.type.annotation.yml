@@ -4,13 +4,6 @@ dependencies:
   enforced:
     module:
       - recogito_integration
-#  module:
-#    - menu_ui
-#third_party_settings:
-#  menu_ui:
-#    available_menus:
-#      - main
-#    parent: 'main:'
 name: Annotation
 type: annotation
 description: ''

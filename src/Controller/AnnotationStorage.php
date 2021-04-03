@@ -76,6 +76,15 @@ class AnnotationStorage extends ControllerBase {
         'target_start' => $annotation_node->get('field_annotation_target_start')->getValue(),
         'textualbodies' => $textualbodies
       );
+      if ($annotation_node->get('field_annotation_type')->getValue()[0]["value"] == "Selection") {
+        $annotation_object['image_source'] = $annotation_node->get('field_annotation_image_source')->getValue();
+        $annotation_object['image_value'] = $annotation_node->get('field_annotation_image_value')->getValue();
+      } else {
+        $annotation_object['target_end'] =  $annotation_node->get('field_annotation_target_end')->getValue();
+        $annotation_object['target_exact'] = $annotation_node->get('field_annotation_target_exact')->getValue();
+        $annotation_object['target_start'] = $annotation_node->get('field_annotation_target_start')->getValue();
+      }
+      $annotation_object['type'] = $annotation_node->get('field_annotation_type')->getValue();
       $annotation_array[] = $annotation_object;
     }
     return JsonResponse::fromJsonString(json_encode($annotation_array));
@@ -248,12 +257,16 @@ class AnnotationStorage extends ControllerBase {
           // annotation fields
           'title' => $annotation->title,
           'field_annotation_id' => $annotation->id,
-          'field_annotation_target_end' => $annotation->target_end,
-          'field_annotation_target_exact' => $annotation->target_exact,
-          'field_annotation_target_start' => $annotation->target_start,
+          'field_annotation_type' =>$annotation->type,
       ];
-
-
+      if ($annotation->type == "Selection") {
+        $params['field_annotation_image_source'] = $annotation->image_source;
+        $params['field_annotation_image_value'] = $annotation->image_value;
+      } else {
+        $params['field_annotation_target_end'] = $annotation->target_end;
+        $params['field_annotation_target_exact'] = $annotation->target_exact;
+        $params['field_annotation_target_start'] = $annotation->target_start;
+      }
 
       $node = Node::create($params);
       $node->save();
@@ -281,10 +294,18 @@ class AnnotationStorage extends ControllerBase {
 
           $annotationNode->set('title', $annotation->title);
 
-          $annotationNode->set('field_annotation_id', $annotation->id); // need to make sure it's unique
-          $annotationNode->set('field_annotation_target_end', $annotation->target_end);
-          $annotationNode->set('field_annotation_target_exact', $annotation->target_exact);
-          $annotationNode->set('field_annotation_target_start', $annotation->target_start);
+          $annotationNode->set('field_annotation_id', $annotation->id);
+
+          $annotationNode->set('field_annotation_type', $annotation->type);
+
+          if ($annotation->type == "Selection") {
+            $annotationNode->set('field_annotation_image_source',$annotation->image_source);
+            $annotationNode->set('field_annotation_image_value',$annotation->image_value);
+          } else {
+            $annotationNode->set('field_annotation_target_end',$annotation->target_end);
+            $annotationNode->set('field_annotation_target_exact',$annotation->target_exact);
+            $annotationNode->set('field_annotation_target_start',$annotation->target_start);
+          }
 
           foreach($annotationNode->get('field_annotation_textualbodies')->referencedEntities() as $textualbody) {
             $textualbody->delete();
@@ -310,7 +331,7 @@ class AnnotationStorage extends ControllerBase {
       $query = \Drupal::entityQuery('node')
       ->condition('status', 1)
       ->condition('type', "annotation_collection")
-      ->condition('title', $page_url);
+      ->condition('field_annotation_collection_url', $page_url);
       $result = $query->execute();
       if (count($result) > 0) {
         return Node::load(reset($result));
@@ -336,9 +357,10 @@ class AnnotationStorage extends ControllerBase {
           'moderation_state' => 'published',
 
           // annotation collection fields
-          'title' => $page_url,
+          'title' => 'Annotation Collection: ' . $page_url,
 
-          'field_annotation_reference' => array()
+          'field_annotation_reference' => array(),
+          'field_annotation_collection_url' => $page_url,
       ];
       $node = Node::create($params);
       $node->save();
