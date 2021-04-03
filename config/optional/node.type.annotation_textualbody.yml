@@ -1,0 +1,13 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - recogito_integration
+name: 'Annotation TextualBody'
+type: annotation_textualbody
+description: ''
+help: ''
+new_revision: true
+preview_mode: 1
+display_submitted: true

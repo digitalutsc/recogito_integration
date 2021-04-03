@@ -1,0 +1,40 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.node.annotation_collection.field_annotation_collection_url
+    - field.field.node.annotation_collection.field_annotation_reference
+    - node.type.annotation_collection
+  enforced:
+    module:
+      - recogito_integration
+  module:
+    - user
+id: node.annotation_collection.default
+targetEntityType: node
+bundle: annotation_collection
+mode: default
+content:
+  field_annotation_collection_url:
+    weight: 102
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    type: basic_string
+    region: content
+  field_annotation_reference:
+    weight: 101
+    label: above
+    settings:
+      link: true
+    third_party_settings: {  }
+    type: entity_reference_label
+    region: content
+  links:
+    weight: 100
+    settings: {  }
+    third_party_settings: {  }
+    region: content
+hidden:
+  langcode: true
+  search_api_excerpt: true

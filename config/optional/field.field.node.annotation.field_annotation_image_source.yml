@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_annotation_image_source
+    - node.type.annotation
+  enforced:
+    module:
+      - recogito_integration
+id: node.annotation.field_annotation_image_source
+field_name: field_annotation_image_source
+entity_type: node
+bundle: annotation
+label: 'Annotation Image Source'
+description: 'For image annotations, the URL of the image containing the annotation.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string_long

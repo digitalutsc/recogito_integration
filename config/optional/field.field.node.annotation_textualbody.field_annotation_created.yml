@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_annotation_created
+    - node.type.annotation_textualbody
+  enforced:
+    module:
+      - recogito_integration
+id: node.annotation_textualbody.field_annotation_created
+field_name: field_annotation_created
+entity_type: node
+bundle: annotation_textualbody
+label: 'Annotation Created'
+description: 'Timestamp created, in <a href="https://www.w3.org/TR/xmlschema-2/#dateTime">W3C xsd:dateTime format</a>'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string_long

@@ -1,0 +1,30 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_annotation_reference
+    - node.type.annotation
+    - node.type.annotation_collection
+  enforced:
+    module:
+      - recogito_integration
+id: node.annotation_collection.field_annotation_reference
+field_name: field_annotation_reference
+entity_type: node
+bundle: annotation_collection
+label: 'Annotation Reference'
+description: 'An entity reference to each Annotation stored on this page.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:node'
+  handler_settings:
+    target_bundles:
+      annotation: annotation
+    sort:
+      field: _none
+    auto_create: false
+    auto_create_bundle: ''
+field_type: entity_reference

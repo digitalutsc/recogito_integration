@@ -1,0 +1,102 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.node.annotation.field_annotation_id
+    - field.field.node.annotation.field_annotation_image_source
+    - field.field.node.annotation.field_annotation_image_value
+    - field.field.node.annotation.field_annotation_page
+    - field.field.node.annotation.field_annotation_target_end
+    - field.field.node.annotation.field_annotation_target_exact
+    - field.field.node.annotation.field_annotation_target_start
+    - field.field.node.annotation.field_annotation_textualbodies
+    - field.field.node.annotation.field_annotation_type
+    - node.type.annotation
+  enforced:
+    module:
+      - recogito_integration
+  module:
+    - user
+id: node.annotation.default
+targetEntityType: node
+bundle: annotation
+mode: default
+content:
+  field_annotation_id:
+    weight: 1
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    type: basic_string
+    region: content
+  field_annotation_image_source:
+    weight: 9
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    type: basic_string
+    region: content
+  field_annotation_image_value:
+    weight: 8
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    type: basic_string
+    region: content
+  field_annotation_page:
+    weight: 6
+    label: above
+    settings:
+      link: true
+    third_party_settings: {  }
+    type: entity_reference_label
+    region: content
+  field_annotation_target_end:
+    weight: 4
+    label: above
+    settings:
+      thousand_separator: ''
+      prefix_suffix: true
+    third_party_settings: {  }
+    type: number_integer
+    region: content
+  field_annotation_target_exact:
+    weight: 2
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    type: basic_string
+    region: content
+  field_annotation_target_start:
+    weight: 3
+    label: above
+    settings:
+      thousand_separator: ''
+      prefix_suffix: true
+    third_party_settings: {  }
+    type: number_integer
+    region: content
+  field_annotation_textualbodies:
+    weight: 5
+    label: above
+    settings:
+      link: true
+    third_party_settings: {  }
+    type: entity_reference_label
+    region: content
+  field_annotation_type:
+    weight: 7
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    type: string
+    region: content
+  links:
+    weight: 0
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+hidden:
+  langcode: true
+  search_api_excerpt: true
