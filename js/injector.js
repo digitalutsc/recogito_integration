@@ -2,97 +2,66 @@ jQuery(document).ready(function(){
   var can_read_annotations = false;
   var perms = drupalSettings.recogito_integration.permissions;
   if (drupalSettings.recogito_integration.attach_attribute_name != "" && perms['recogito view annotations'] && !window.location.pathname.includes('recogito_integration')) {
-    (function awaitOpenSeadragonAnnotorious() {
-        if (typeof OpenSeadragon != "undefined" && typeof OpenSeadragon.Annotorious != "undefined" && typeof drupalSettings.islandora_open_seadragon_viewer != "undefined" && jQuery('.openseadragon-canvas').length > 0) {
-        var strings = drupalSettings.recogito_integration.taxonomy_terms;
-        var readOnly = (!perms['recogito create annotations'] && !perms['recogito edit annotations'] && !perms['recogito delete annotations'] && !perms['recogito edit own annotations'] && !perms['recogito delete own annotations'])
-        // Intialize Recogito
-        var attach_element;
-        if (drupalSettings.recogito_integration.attach_attribute_type == 'id') {
-          attach_element = document.getElementById(drupalSettings.recogito_integration.attach_attribute_name);
-        } else {
-          attach_element = document.getElementsByClassName(drupalSettings.recogito_integration.attach_attribute_name)[0];
-        }
-        var text_anno = Recogito.init({
-          //IMPORTANT: Ensure content contains an element on the page
-          content: attach_element, // Element id or DOM node to attach to
-          locale: 'auto',
-          readonly: readOnly,
-          widgets: [
-            'COMMENT',
-            { widget: 'TAG', vocabulary: strings }
-          ],
-          relationVocabulary: [ 'isRelated', 'isPartOf', 'isSameAs ']
-        });
-
-        var image_anno = OpenSeadragon.Annotorious(drupalSettings.islandora_open_seadragon_viewer);
-
-        var user_data = drupalSettings.recogito_integration.user_data;
-        text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
-        image_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
-        //window.location.hostname + "/modules/recogito_integration/recogito_integration_functions.php"
-        page_url = window.location.pathname;
-        jQuery.ajax({
-          type: "GET",
-          url: "/recogito_integration/get",
-          dataType: 'json',
-          headers: {
-            'pageurl': page_url,
-          },
-
-          success: function(data) {
-            console.log(data);
-            for (annotation in data) {
-              w3c = get_annotation_w3c(data[annotation]);
-              if (w3c.type == "Annotation") {
-                text_anno.addAnnotation(w3c);
-              } else {
-                image_anno.addAnnotation(w3c);
-              }
-            }
-          },
-          error: function(xhr, status, error) {
-            alert(xhr.responseText);
-          }
-        });
-        //var anno = OpenSeadragon.Annotorious(document.getElementsByClassName("openseadragon-viewer")[0]);
-        text_anno.on('selectAnnotation', function(annotation){
-          select_annotation(annotation);
-        });
-
-        text_anno.on('createAnnotation', function(annotation){
-          create_annotation(annotation);
-        });
-
-        text_anno.on('updateAnnotation', function(annotation, previous){
-          update_annotation(annotation, previous);
-        });
-
-        text_anno.on('deleteAnnotation', function(annotation){
-          delete_annotation(annotation);
-        });
-
-        image_anno.on('selectAnnotation', function(annotation){
-          select_annotation(annotation);
-        });
-
-        image_anno.on('createAnnotation', function(annotation){
-          create_annotation(annotation);
-        });
-
-        image_anno.on('updateAnnotation', function(annotation, previous){
-          console.log(annotation);
-          console.log(previous);
-          update_annotation(annotation, previous);
-        });
-
-        image_anno.on('deleteAnnotation', function(annotation){
-          delete_annotation(annotation);
-        });
+    var strings = drupalSettings.recogito_integration.taxonomy_terms;
+    var readOnly = (!perms['recogito create annotations'] && !perms['recogito edit annotations'] && !perms['recogito delete annotations'] && !perms['recogito edit own annotations'] && !perms['recogito delete own annotations'])
+    // Intialize Recogito
+    var attach_element;
+    if (drupalSettings.recogito_integration.attach_attribute_type == 'id') {
+      attach_element = document.getElementById(drupalSettings.recogito_integration.attach_attribute_name);
     } else {
-      setTimeout(awaitOpenSeadragonAnnotorious, 300);
+      attach_element = document.getElementsByClassName(drupalSettings.recogito_integration.attach_attribute_name)[0];
     }
-  })();
+    var text_anno = Recogito.init({
+      //IMPORTANT: Ensure content contains an element on the page
+      content: attach_element, // Element id or DOM node to attach to
+      locale: 'auto',
+      readonly: readOnly,
+      widgets: [
+        'COMMENT',
+        { widget: 'TAG', vocabulary: strings }
+      ],
+      relationVocabulary: [ 'isRelated', 'isPartOf', 'isSameAs ']
+    });
+    var user_data = drupalSettings.recogito_integration.user_data;
+    text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
+    //window.location.hostname + "/modules/recogito_integration/recogito_integration_functions.php"
+    page_url = window.location.pathname;
+    jQuery.ajax({
+      type: "GET",
+      url: "/recogito_integration/get",
+      dataType: 'json',
+      headers: {
+        'pageurl': page_url,
+      },
+
+      success: function(data) {
+        console.log(data);
+        for (annotation in data) {
+          w3c = get_annotation_w3c(data[annotation]);
+          if (w3c.type == "Annotation") {
+            text_anno.addAnnotation(w3c);
+          }
+        }
+      },
+      error: function(xhr, status, error) {
+        alert(xhr.responseText);
+      }
+    });
+    text_anno.on('selectAnnotation', function(annotation){
+      select_annotation(annotation);
+    });
+
+    text_anno.on('createAnnotation', function(annotation){
+      create_annotation(annotation);
+    });
+
+    text_anno.on('updateAnnotation', function(annotation, previous){
+      update_annotation(annotation, previous);
+    });
+
+    text_anno.on('deleteAnnotation', function(annotation){
+      delete_annotation(annotation);
+    });
   }
 });
 
