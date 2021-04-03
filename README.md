@@ -1,3 +1,7 @@
-Incorporates the [Recogito JS library](https://github.com/recogito/recogito-js) into web pages for easy creation and tagging of textual annotations.
+Image annotation branch.
 
-This project is sponsored by the University of Toronto Scarborough's Digital Scholarship Unit.
+To load on a page, requires an openseadragon viewer to be present. Additionally, requires a drupalSettings variable 'islandora_open_seadragon_viewer' set to the viewer used for openseadragon.
+
+For example:
+`var viewer = new OpenSeadragon.Viewer(options);`
+`drupalSettings.islandora_open_seadragon_viewer = viewer`

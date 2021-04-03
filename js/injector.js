@@ -115,13 +115,13 @@ function select_annotation(a) {
   (function loopSearch() {
     if (jQuery('.r6o-widget').length == comment_count + 2) { //Work once all comments have been loaded
       if (!perms['recogito create annotations'] && !perms['recogito edit annotations'] && !perms['recogito delete annotations'] && !perms['recogito edit own annotations'] && !perms['recogito delete own annotations']) {
-        jQuery('.r6o-arrow-down').remove();
+        jQuery('.r6o-arrow-down').hide();
       }
       jQuery('.r6o-widget').each(function(index) {
         var commentorname = jQuery(this).find('.r6o-lastmodified-by').text();
         if (commentorname == user_data.displayName) {
           if (!perms['recogito edit own annotations'] && !perms['recogito delete own annotations']) {
-            jQuery(this).find('.r6o-arrow-down').remove();
+            jQuery(this).find('.r6o-arrow-down').hide();
           } else if (!perms['recogito edit own annotations'] || !perms['recogito delete own annotations']) {
             jQuery(this).click(function(e) {
               if (!perms['recogito edit own annotations']) {
@@ -134,7 +134,7 @@ function select_annotation(a) {
           }
         } else {
           if (!perms['recogito edit annotations'] && !perms['recogito delete annotations']) {
-            jQuery(this).find('.r6o-arrow-down').remove();
+            jQuery(this).find('.r6o-arrow-down').hide();
           } else if (!perms['recogito edit annotations'] || !perms['recogito delete annotations']) {
             jQuery(this).click(function(e) {
               if (!perms['recogito edit annotations']) {
