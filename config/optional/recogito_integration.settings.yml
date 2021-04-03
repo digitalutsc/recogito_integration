@@ -1,4 +1,0 @@
-recogito_integration:
-  attach_attribute_type: 'id'
-  attach_attribute_name: 'main'
-  annotation_vocab_name: 'annotation_vocab'

@@ -1,5 +1,0 @@
-recogito_settings:
-  title: 'Recogito Integration settings'
-  description: 'Configure settings for the Recogito Integration module.'
-  route_name: recogito_settings
-  parent: 'system.admin_config_development'
