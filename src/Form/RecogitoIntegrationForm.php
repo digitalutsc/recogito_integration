@@ -25,8 +25,8 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       '#type' => 'select',
       '#title' => $this->t('Recogito Integration DOM Element Type:'),
       '#options' => [
-        0 => $this->t('id'),
-        1 => $this->t('class'),
+        'id' => $this->t('id'),
+        'class' => $this->t('class'),
       ],
       '#default_value' => $config->get('recogito_integration.attach_attribute_type'),
       '#description' => $this->t('The type of attribute to attach the recogito JS library to. May only be an id or a class.'),

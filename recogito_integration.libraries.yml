@@ -1,5 +1,4 @@
 recogito_injection:
-  version: 1.x
   css:
     state:
       css/recogito.min.css: { weight: -4 }
