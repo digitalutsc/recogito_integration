@@ -32,12 +32,12 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       '#description' => $this->t('The type of attribute to attach the recogito JS library to. May only be an id or a class.'),
     ];
 
-    $form['attach_attribute_name'] = [
+    /*$form['attach_attribute_name'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Recogito Integration DOM Element Name:'),
       '#default_value' => $config->get('recogito_integration.attach_attribute_name'),
       '#description' => $this->t('The name of the attribute to attach the recogito JS library to. Do not enter attribute identifiers such as . or #. For example, to attach to the class \'main\' you would enter \'main\'.'),
-    ];
+    ];*/
 
     /*$form['annotation_vocab_name'] = [
      '#type' => 'textarea',
@@ -75,7 +75,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
     public function submitForm(array &$form, FormStateInterface $form_state) {
       $config = $this->config('recogito_integration.settings');
       $config->set('recogito_integration.attach_attribute_type', $form_state->getValue('attach_attribute_type'));
-      $config->set('recogito_integration.attach_attribute_name', $form_state->getValue('attach_attribute_name'));
+      //$config->set('recogito_integration.attach_attribute_name', $form_state->getValue('attach_attribute_name'));
       $config->set('recogito_integration.annotation_vocab_name', $form_state->getValue('annotation_vocab_name'));
       $config->save();
       return parent::submitForm($form, $form_state);

@@ -8,9 +8,6 @@ recogito_integration.settings:
         attach_attribute_type:
           type: select
           label: 'Recogito Integration DOM Element Type:'
-        attach_attribute_name:
-          type: text
-          label: 'Recogito Integration DOM Element Name:'
         annotation_vocab_name:
           type: text
           label: 'Annotation Vocabulary Name:'

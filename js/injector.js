@@ -22,39 +22,45 @@ function getTextAnnotation(perms) {
   var readOnly = (!perms['recogito create annotations'] && !perms['recogito edit annotations'] && !perms['recogito delete annotations'] && !perms['recogito edit own annotations'] && !perms['recogito delete own annotations'])
   // Intialize Recogito
   var attach_element;
-  if (drupalSettings.recogito_integration.attach_attribute_type === 'id') {
+  /*if (drupalSettings.recogito_integration.attach_attribute_type === 'id') {
     attach_element = document.getElementById(drupalSettings.recogito_integration.attach_attribute_name);
   } else {
-    attach_element= jQuery("div.node__content").find("p")[0];
+    attach_element= jQuery("article > div.node__content > div.field--name-body");
+  }*/
+  attach_element = jQuery("article > div.node__content > div.field--name-body").find('p');
+
+  for (var i = 0; i < attach_element.length; i++) {
+    var text_anno = Recogito.init({
+      //IMPORTANT: Ensure content contains an element on the page
+      content: attach_element[i], // Element id or DOM node to attach to
+      //content: 'node__content', // Element id or DOM node to attach to
+      locale: 'auto',
+      readonly: readOnly,
+      widgets: [
+        'COMMENT',
+        {widget: 'TAG', vocabulary: strings}
+      ],
+      relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
+    });
+    text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
+    text_anno.on('selectAnnotation', function (annotation) {
+      select_annotation(annotation);
+    });
+
+    text_anno.on('createAnnotation', function (annotation) {
+      create_annotation(annotation);
+    });
+
+    text_anno.on('updateAnnotation', function (annotation, previous) {
+      update_annotation(annotation, previous);
+    });
+
+    text_anno.on('deleteAnnotation', function (annotation) {
+      delete_annotation(annotation);
+    });
   }
-  var text_anno = Recogito.init({
-    //IMPORTANT: Ensure content contains an element on the page
-    content: attach_element, // Element id or DOM node to attach to
-    locale: 'auto',
-    readonly: readOnly,
-    widgets: [
-      'COMMENT',
-      {widget: 'TAG', vocabulary: strings}
-    ],
-    relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
-  });
-  text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
-  text_anno.on('selectAnnotation', function (annotation) {
-    select_annotation(annotation);
-  });
-
-  text_anno.on('createAnnotation', function (annotation) {
-    create_annotation(annotation);
-  });
-
-  text_anno.on('updateAnnotation', function (annotation, previous) {
-    update_annotation(annotation, previous);
-  });
-
-  text_anno.on('deleteAnnotation', function (annotation) {
-    delete_annotation(annotation);
-  });
 }
+
 
 /**
  * Setup annotation for Openseadragon viewer
