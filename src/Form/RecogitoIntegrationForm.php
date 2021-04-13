@@ -39,12 +39,25 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       '#description' => $this->t('The name of the attribute to attach the recogito JS library to. Do not enter attribute identifiers such as . or #. For example, to attach to the class \'main\' you would enter \'main\'.'),
     ];
 
-    $form['annotation_vocab_name'] = [
-      '#type' => 'textarea',
+    /*$form['annotation_vocab_name'] = [
+     '#type' => 'textarea',
+     '#title' => $this->t('Annotation Vocabulary Name:'),
+     '#default_value' => $config->get('recogito_integration.annotation_vocab_name'),
+     '#description' => $this->t('The name of the vocabulary to pass annotation tags to and from. Leave blank if you do not wish to use this feature.'),
+   ];*/
+
+    /* Kyle replace preset dropdown list instead of text area for convenience */
+    $vocabularies = \Drupal\taxonomy\Entity\Vocabulary::loadMultiple();
+    $options_taxonomy = array(-1 => '----');
+    foreach ($vocabularies as $vocal) {
+      $options_taxonomy[$vocal->id()] = $vocal->label();
+    }
+    $form['annotation_vocab_name']  = array(
+      '#type' => 'select',
       '#title' => $this->t('Annotation Vocabulary Name:'),
+      '#options' => $options_taxonomy,
       '#default_value' => $config->get('recogito_integration.annotation_vocab_name'),
-      '#description' => $this->t('The name of the vocabulary to pass annotation tags to and from. Leave blank if you do not wish to use this feature.'),
-    ];
+    );
 
     return $form;
     }
