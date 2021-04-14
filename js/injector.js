@@ -3,20 +3,20 @@ jQuery(document).ready(function () {
   var perms = drupalSettings.recogito_integration.permissions;
   if (drupalSettings.recogito_integration.attach_attribute_name != "" && perms['recogito view annotations'] && !window.location.pathname.includes('recogito_integration')) {
     if (typeof OpenSeadragon != "undefined" && typeof OpenSeadragon.Annotorious != "undefined" && typeof drupalSettings.islandora_open_seadragon_viewer != "undefined" && jQuery('.openseadragon-canvas').length > 0) {
-      getOpenSeadragonAnnotorious(perms);
+      initOpenSeadragonAnnnotation(perms);
 
     } else {
       //setTimeout(awaitOpenSeadragonAnnotorious, 300);
-      getTextAnnotation(perms);
+      initTextAnnotation(perms);
     }
   }
 });
 
 /**
  * Setup annotation for text
- * @param perms
+ * @param perms : assigned permission config
  */
-function getTextAnnotation(perms) {
+function initTextAnnotation(perms) {
   var user_data = drupalSettings.recogito_integration.user_data;
   var strings = drupalSettings.recogito_integration.taxonomy_terms;
   var readOnly = (!perms['recogito create annotations'] && !perms['recogito edit annotations'] && !perms['recogito delete annotations'] && !perms['recogito edit own annotations'] && !perms['recogito delete own annotations'])
@@ -36,6 +36,9 @@ function getTextAnnotation(perms) {
       relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
     });
     text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
+
+    getAnnotations(text_anno);
+
     text_anno.on('selectAnnotation', function (annotation) {
       select_annotation(annotation);
     });
@@ -55,13 +58,38 @@ function getTextAnnotation(perms) {
 
 }
 
+/**
+ * Ajax call to get list of annotation base on node url
+ *
+ * @param recogito
+ */
+function getAnnotations(recogito) {
+  jQuery.ajax({
+    type: "GET",
+    url: "/recogito_integration/get",
+    dataType: 'json',
+    headers: {
+      'pageurl': window.location.pathname,
+    },
+
+    success: function (data) {
+      for (annotation in data) {
+        w3c = convert_annotation_w3c(data[annotation]);
+        recogito.addAnnotation(w3c);
+      }
+    },
+    error: function (xhr, status, error) {
+      alert(xhr.responseText);
+    }
+  });
+}
 
 /**
  * Setup annotation for Openseadragon viewer
  *
- * @param perms
+ * @param perms : permission config
  */
-function getOpenSeadragonAnnotorious(perms) {
+function initOpenSeadragonAnnnotation(perms) {
   var user_data = drupalSettings.recogito_integration.user_data;
   var image_anno = OpenSeadragon.Annotorious(drupalSettings.islandora_open_seadragon_viewer);
   image_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
@@ -78,7 +106,7 @@ function getOpenSeadragonAnnotorious(perms) {
     success: function (data) {
       console.log(data);
       for (annotation in data) {
-        w3c = get_annotation_w3c(data[annotation]);
+        w3c = convert_annotation_w3c(data[annotation]);
         if (w3c.type == "Annotation") {
           text_anno.addAnnotation(w3c);
         } else {
@@ -112,11 +140,11 @@ function getOpenSeadragonAnnotorious(perms) {
   });
 }
 
-function awaitOpenSeadragonAnnotorious() {
-
-}
-
-//When selecting an annotation, remove buttons the user has insufficient permissions for
+/**
+ * When selecting an annotation, remove buttons the user has insufficient permissions for
+ *
+ * @param a: annotation object
+ */
 function select_annotation(a) {
   var comment_count = 0;
   var tag_list = [];
@@ -199,10 +227,14 @@ function select_annotation(a) {
   })();
 }
 
-//Create an annotation within Drupal, given W3C data
+/**
+ * Create an annotation within Drupal, given W3C data
+ *
+ * @param a
+ */
 function create_annotation(a) {
   var page_url = window.location.pathname;
-  var annotation_obj = get_annotation_object(a);
+  var annotation_obj = convert_annotation_object(a);
   jQuery.ajax({
     type: "POST",
     url: "/recogito_integration/create",
@@ -221,9 +253,14 @@ function create_annotation(a) {
   });
 }
 
-//Update an annotation in Drupal, given W3C data
+/**
+ * Update an annotation in Drupal, given W3C data
+ *
+ * @param annotation
+ * @param previous
+ */
 function update_annotation(annotation, previous) {
-  var annotation_obj = get_annotation_object(annotation);
+  var annotation_obj = convert_annotation_object(annotation);
   jQuery.ajax({
     type: "POST",
     url: "/recogito_integration/update",
@@ -241,9 +278,13 @@ function update_annotation(annotation, previous) {
   });
 }
 
-//Delete an annotation from Drupal, given W3C data
+/**
+ * Delete an annotation from Drupal, given W3C data
+ *
+ * @param annotation
+ */
 function delete_annotation(annotation) {
-  var annotation_obj = get_annotation_object(annotation);
+  var annotation_obj = convert_annotation_object(annotation);
   jQuery.ajax({
     type: "DELETE",
     url: "/recogito_integration/delete",
@@ -261,8 +302,14 @@ function delete_annotation(annotation) {
   });
 }
 
-//Convert a W3C annotation object to an object containing the bare minimum of data to store
-function get_annotation_object(a) {
+
+/**
+ * Convert a W3C annotation object to an object containing the bare minimum of data to store
+ *
+ * @param a : annotation object
+ * @returns {{}}
+ */
+function convert_annotation_object(a) {
   var annotation_object = {};
   annotation_object.textualbodies = [];
   for (textualbody in a.body) {
@@ -295,8 +342,13 @@ function get_annotation_object(a) {
   return annotation_object;
 }
 
-//Convert an object with only stored data to a W3C object to pass to the library
-function get_annotation_w3c(annotation_object) {
+/**
+ * Convert an object with only stored data to a W3C object to pass to the library
+ *
+ * @param annotation_object
+ * @returns {{}}
+ */
+function convert_annotation_w3c(annotation_object) {
   var annotation_w3c = {};
   annotation_w3c['@context'] = "http://www.w3.org/ns/anno.jsonld";
   annotation_w3c.id = annotation_object.id[0].value;
