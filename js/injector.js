@@ -66,7 +66,7 @@ function getOpenSeadragonAnnotorious(perms) {
   var image_anno = OpenSeadragon.Annotorious(drupalSettings.islandora_open_seadragon_viewer);
   image_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
   //window.location.hostname + "/modules/recogito_integration/recogito_integration_functions.php"
-  page_url = window.location.pathname;
+  var page_url = window.location.pathname;
   jQuery.ajax({
     type: "GET",
     url: "/recogito_integration/get",
@@ -201,6 +201,7 @@ function select_annotation(a) {
 
 //Create an annotation within Drupal, given W3C data
 function create_annotation(a) {
+  var page_url = window.location.pathname;
   var annotation_obj = get_annotation_object(a);
   jQuery.ajax({
     type: "POST",
