@@ -20,20 +20,13 @@ function getTextAnnotation(perms) {
   var user_data = drupalSettings.recogito_integration.user_data;
   var strings = drupalSettings.recogito_integration.taxonomy_terms;
   var readOnly = (!perms['recogito create annotations'] && !perms['recogito edit annotations'] && !perms['recogito delete annotations'] && !perms['recogito edit own annotations'] && !perms['recogito delete own annotations'])
-  // Intialize Recogito
-  var attach_element;
-  /*if (drupalSettings.recogito_integration.attach_attribute_type === 'id') {
-    attach_element = document.getElementById(drupalSettings.recogito_integration.attach_attribute_name);
-  } else {
-    attach_element= jQuery("article > div.node__content > div.field--name-body");
-  }*/
-  attach_element = jQuery("article > div.node__content > div.field--name-body").find('p');
+
+  // need [0] because selector returns an array instead of object
+  var attach_element = jQuery("article > div.node__content > div.field--name-body");
 
   for (var i = 0; i < attach_element.length; i++) {
     var text_anno = Recogito.init({
-      //IMPORTANT: Ensure content contains an element on the page
       content: attach_element[i], // Element id or DOM node to attach to
-      //content: 'node__content', // Element id or DOM node to attach to
       locale: 'auto',
       readonly: readOnly,
       widgets: [
@@ -59,6 +52,7 @@ function getTextAnnotation(perms) {
       delete_annotation(annotation);
     });
   }
+
 }
 
 
