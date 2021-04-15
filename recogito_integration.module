@@ -43,3 +43,86 @@ function recogito_integration_page_attachments(array &$attachments) {
     return $attachments;
   }
 }
+
+
+function recogito_integration_entity_operation_alter(array &$operations, $entity) {
+  print_log("recogito_integration_entity_operation_alter");
+  $entityTypeId = $entity->getEntityTypeId();
+  $nodeType = $entity->getType();
+  if ($entityTypeId !== 'node') {
+    return;
+  }
+
+  if ($nodeType === "annotation_collection") {
+    $anno_collection_url = $entity->get('field_annotation_collection_url')->getValue()[0]['value'];
+    if (str_contains($anno_collection_url, "/node/")) {
+      $nodeId = explode("/",$anno_collection_url)[2];
+    }
+    else {
+      $node = getNodeIdByAlias($anno_collection_url);
+      $nodeId = $node->id();
+    }
+
+
+    print_log($nodeId);
+    $editUrl = Url::fromRoute('entity.node.canonical', ['node' => $nodeId]);
+    $operations['preview_operation'] = array(
+      'title' => t('Demo'),
+      'weight' => 20,
+      'url' => $editUrl,
+    );
+  }
+
+
+  $nodeId = $entity->id();
+  if (in_array($nodeType, ['annotation_collection', 'annotation', 'annotation_textualbody'])) {
+    // add custom operation
+    $editUrl = Url::fromRoute('entity.node.canonical', ['node' => $nodeId]);
+    $operations['view_operation'] = array(
+      'title' => t('View'),
+      'weight' => 20,
+      'url' => $editUrl,
+    );
+  }
+}
+
+
+/**
+ * @param $alias
+ *
+ * @return int|string
+ */
+function getNodeIdByAlias(string $alias) {
+  print_log($alias);
+  $node = NULL;
+  $path = \Drupal::service('path_alias.manager')->getPathByAlias($alias);
+  if(preg_match('/node\/(\d+)/', $path, $matches)) {
+    $node = \Drupal\node\Entity\Node::load($matches[1]);
+  }
+  return $node;
+}
+
+/**
+ * Debug function: display any variable to error log
+ *
+ * @param $thing
+ */
+if (!function_exists('print_log')) {
+  function print_log($thing)
+  {
+    error_log(print_r($thing, true), 0);
+  }
+
+}
+/**
+ * Debug function: display any variable to current webpage
+ * @param $thing
+ */
+if (!function_exists('logging')) {
+  function logging($thing)
+  {
+    echo "<pre>";
+    print_r($thing);
+    echo "</pre>";
+  }
+}
