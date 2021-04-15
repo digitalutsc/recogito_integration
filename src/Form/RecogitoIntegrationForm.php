@@ -21,7 +21,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
     $form = parent::buildForm($form, $form_state);
     $config = $this->config('recogito_integration.settings');
 
-    $form['attach_attribute_type'] = [
+    /*$form['attach_attribute_type'] = [
       '#type' => 'select',
       '#title' => $this->t('Recogito Integration DOM Element Type:'),
       '#options' => [
@@ -32,7 +32,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       '#description' => $this->t('The type of attribute to attach the recogito JS library to. May only be an id or a class.'),
     ];
 
-    /*$form['attach_attribute_name'] = [
+    $form['attach_attribute_name'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Recogito Integration DOM Element Name:'),
       '#default_value' => $config->get('recogito_integration.attach_attribute_name'),
@@ -48,12 +48,12 @@ class RecogitoIntegrationForm extends ConfigFormBase {
 
     /* Kyle replace preset dropdown list instead of text area for convenience */
     $vocabularies = \Drupal\taxonomy\Entity\Vocabulary::loadMultiple();
-    $options_taxonomy = array(-1 => '----');
+    $options_taxonomy = array();
     foreach ($vocabularies as $vocal) {
       $options_taxonomy[$vocal->id()] = $vocal->label();
     }
     $form['annotation_vocab_name']  = array(
-      '#type' => 'select',
+      '#type' => 'radios',
       '#title' => $this->t('Annotation Vocabulary Name:'),
       '#options' => $options_taxonomy,
       '#default_value' => $config->get('recogito_integration.annotation_vocab_name'),
