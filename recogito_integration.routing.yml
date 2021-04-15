@@ -37,3 +37,6 @@ recogito_settings:
     _title: 'Recogito Integration Settings'
   requirements:
     _permission: 'administer site configuration'
+
+recogito_admin_manage:
+  path: '/admin/content/annotation/collection'

@@ -1,12 +1,14 @@
-name: Recogito Integration
-description: Creates API storage for Recogito annotations
+name: 'Recogito Integration'
+description: 'Creates API storage for Recogito annotations'
 package: Custom
 type: module
-version: 1.0
+version: !!float 1
 core: 8.x
-core_version_requirement: ^8 || ^9
+core_version_requirement: '^8 || ^9'
 configure: recogito_settings
 dependencies:
-  - drupal:node
-  - drupal:field
+  - 'drupal:node'
+  - 'drupal:field'
   - openseadragon
+  - node
+  - user
