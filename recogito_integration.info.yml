@@ -9,6 +9,5 @@ configure: recogito_settings
 dependencies:
   - 'drupal:node'
   - 'drupal:field'
-  - openseadragon
   - node
   - user

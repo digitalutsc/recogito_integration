@@ -48,10 +48,16 @@ function recogito_integration_page_attachments(array &$attachments) {
 function recogito_integration_entity_operation_alter(array &$operations, $entity) {
   print_log("recogito_integration_entity_operation_alter");
   $entityTypeId = $entity->getEntityTypeId();
-  $nodeType = $entity->getType();
+  
   if ($entityTypeId !== 'node') {
     return;
   }
+
+  $nodeType = $entity->getType();
+  if (!isset($nodeType)) {
+        return;
+  }
+
 
   if ($nodeType === "annotation_collection") {
     $anno_collection_url = $entity->get('field_annotation_collection_url')->getValue()[0]['value'];
