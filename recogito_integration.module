@@ -68,22 +68,25 @@ function recogito_integration_entity_operation_alter(array &$operations, $entity
 
   if ($nodeType === "annotation_collection") {
     $anno_collection_url = $entity->get('field_annotation_collection_url')->getValue()[0]['value'];
-    if (isset($anno_collection_url) && str_contains($anno_collection_url, "/node/")) {
-      $nodeId = explode("/",$anno_collection_url)[2];
-    }
-    else {
-      $node = getNodeIdByAlias($anno_collection_url);
-      $nodeId = $node->id();
-    }
+    if (isset($anno_collection_url)) {
+      if (str_contains($anno_collection_url, "/node/")) {
+        $nodeId = explode("/",$anno_collection_url)[2];
+      }
+      else {
+        $node = getNodeIdByAlias($anno_collection_url);
+        $nodeId = $node->id();
+      }
 
 
-    print_log($nodeId);
-    $editUrl = Url::fromRoute('entity.node.canonical', ['node' => $nodeId]);
-    $operations['preview_operation'] = array(
-      'title' => t('Demo'),
-      'weight' => 20,
-      'url' => $editUrl,
-    );
+      print_log($nodeId);
+      $editUrl = Url::fromRoute('entity.node.canonical', ['node' => $nodeId]);
+      $operations['preview_operation'] = array(
+        'title' => t('Demo'),
+        'weight' => 20,
+        'url' => $editUrl,
+      );
+    }
+
   }
 
 
