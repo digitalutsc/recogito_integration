@@ -34,7 +34,7 @@ recogito_settings:
   path: '/admin/config/development/recogito_integration'
   defaults:
     _form: '\Drupal\recogito_integration\Form\RecogitoIntegrationForm'
-    _title: 'Recogito Integration Settings'
+    _title: 'Recogito Annotation'
   requirements:
     _permission: 'administer site configuration'
 

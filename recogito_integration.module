@@ -33,9 +33,13 @@ function recogito_integration_page_attachments(array &$attachments) {
       'displayName' => \Drupal::currentUser()->getDisplayName()
     ];
     $attachments['#attached']['drupalSettings']['recogito_integration']['user_data'] = $user_data;
+    $attachments['#attached']['drupalSettings']['recogito_integration']['initial_setup'] =
+      (\Drupal::config('recogito_integration.settings') !== null
+        && !empty(\Drupal::config('recogito_integration.settings')->get('recogito_integration.initialsetup')))
+        ? \Drupal::config('recogito_integration.settings')->get('recogito_integration.initialsetup') : false;
 
-    $attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_type'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_type');
-    $attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_name'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name');
+    //$attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_type'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_type');
+    //$attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_name'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name');
 
     //$attachments['#attached']['library'][] = 'openseadragon/init';
     $attachments['#attached']['library'][] = 'recogito_integration/recogito_injection';
@@ -48,7 +52,7 @@ function recogito_integration_page_attachments(array &$attachments) {
 function recogito_integration_entity_operation_alter(array &$operations, $entity) {
   print_log("recogito_integration_entity_operation_alter");
   $entityTypeId = $entity->getEntityTypeId();
-  
+
   if ($entityTypeId !== 'node') {
     return;
   }

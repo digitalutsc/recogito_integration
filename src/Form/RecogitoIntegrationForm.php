@@ -21,6 +21,29 @@ class RecogitoIntegrationForm extends ConfigFormBase {
     $form = parent::buildForm($form, $form_state);
     $config = $this->config('recogito_integration.settings');
 
+    // pull list of exsiting content types of the site
+    $content_types = \Drupal::entityTypeManager()
+      ->getStorage('node_type')
+      ->loadMultiple();
+    $options_contentypes = array();
+    foreach ($content_types as $ct) {
+      if (!in_array($ct->id(), ['annotation_collection', 'annotation', 'annotation_textualbody'])) {
+        $options_contentypes[$ct->id()] = $ct->label();
+      }
+    }
+
+
+    $form['set-permission'] = array(
+      '#markup' => $this->t("<p><strong>For permission, please config who can create annotation for content at <a href='/admin/people/permissions'>here</a></strong></p>")
+    );
+
+    $form['select-content-types'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('Which content type(s) to be annotated:'),
+      '#options' => $options_contentypes,
+      '#default_value' => ($config->get('recogito_integration.content-type-to-annotated') !== null) ? array_keys(array_filter($config->get('recogito_integration.content-type-to-annotated'))) : [],
+    );
+
     /*$form['attach_attribute_type'] = [
       '#type' => 'select',
       '#title' => $this->t('Recogito Integration DOM Element Type:'),
@@ -74,8 +97,9 @@ class RecogitoIntegrationForm extends ConfigFormBase {
      */
     public function submitForm(array &$form, FormStateInterface $form_state) {
       $config = $this->config('recogito_integration.settings');
-      $config->set('recogito_integration.attach_attribute_type', $form_state->getValue('attach_attribute_type'));
+      $config->set('recogito_integration.initialsetup', true);
       //$config->set('recogito_integration.attach_attribute_name', $form_state->getValue('attach_attribute_name'));
+      $config->set('recogito_integration.content-type-to-annotated', $form_state->getValues()['select-content-types']);
       $config->set('recogito_integration.annotation_vocab_name', $form_state->getValue('annotation_vocab_name'));
       $config->save();
       return parent::submitForm($form, $form_state);

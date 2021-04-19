@@ -1,7 +1,9 @@
 jQuery(document).ready(function () {
+  console.log(drupalSettings.recogito_integration);
   var can_read_annotations = false;
   var perms = drupalSettings.recogito_integration.permissions;
-  if (drupalSettings.recogito_integration.attach_attribute_name != "" && perms['recogito view annotations'] && !window.location.pathname.includes('recogito_integration')) {
+
+  if (perms['recogito view annotations'] && !window.location.pathname.includes('recogito_integration')) {
     if (typeof OpenSeadragon != "undefined" && typeof OpenSeadragon.Annotorious != "undefined" && typeof drupalSettings.islandora_open_seadragon_viewer != "undefined" && jQuery('.openseadragon-canvas').length > 0) {
       initOpenSeadragonAnnnotation(perms);
 
@@ -19,11 +21,17 @@ jQuery(document).ready(function () {
 function initTextAnnotation(perms) {
   var user_data = drupalSettings.recogito_integration.user_data;
   var strings = drupalSettings.recogito_integration.taxonomy_terms;
-  var readOnly = (!perms['recogito create annotations'] && !perms['recogito edit annotations'] && !perms['recogito delete annotations'] && !perms['recogito edit own annotations'] && !perms['recogito delete own annotations'])
+  var readOnly = (!perms['recogito create annotations'] &&
+    !perms['recogito edit annotations'] &&
+    !perms['recogito delete annotations'] &&
+    !perms['recogito edit own annotations'] &&
+    !perms['recogito delete own annotations'])
 
   // need [0] because selector returns an array instead of object
   var attach_element = jQuery("article > div.node__content > div.field--name-body");
-
+  /*if (readOnly) {
+    attach_element = null;
+  }*/
   for (var i = 0; i < attach_element.length; i++) {
     var text_anno = Recogito.init({
       content: attach_element[i], // Element id or DOM node to attach to
@@ -39,23 +47,51 @@ function initTextAnnotation(perms) {
 
     getAnnotations(text_anno);
 
+    text_anno.on('createSelection', function (annotation) {
+      console.log("createSelection");
+    });
+
     text_anno.on('selectAnnotation', function (annotation) {
-      select_annotation(annotation);
+      // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+      console.log("selectannotation");
+      if (drupalSettings.recogito_integration.initial_setup)
+        adjustUIcomponentsByPermission(annotation);
+      else
+        alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
     });
 
     text_anno.on('createAnnotation', function (annotation) {
-      create_annotation(annotation);
+      console.log("createAnnotation");
+      // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+      if (drupalSettings.recogito_integration.initial_setup === false)
+        alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
+      else if (perms['recogito create annotations'] === false)
+        alert("Your annotation won't be saved because you don't have permission to create annotation for this content.")
+      else
+        create_annotation(annotation);
     });
 
     text_anno.on('updateAnnotation', function (annotation, previous) {
-      update_annotation(annotation, previous);
+      // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+      if (drupalSettings.recogito_integration.initial_setup === false)
+        alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
+      else if (perms['recogito edit annotations'] === false)
+        alert("Your annotation won't be saved because you don't have permission to update this annotation of this content.")
+      else
+        update_annotation(annotation, previous);
     });
 
     text_anno.on('deleteAnnotation', function (annotation) {
-      delete_annotation(annotation);
+      // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+
+      if (drupalSettings.recogito_integration.initial_setup === false)
+        alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
+      else if (perms['recogito delete annotations'] === false)
+        alert("Your annotation won't be saved because you don't have permission to update this annotation of this content.")
+      else
+        delete_annotation(annotation);
     });
   }
-
 }
 
 /**
@@ -63,7 +99,7 @@ function initTextAnnotation(perms) {
  *
  * @param recogito
  */
-function getAnnotations(recogito) {
+function getAnnotations(recogito, readonly = false) {
   jQuery.ajax({
     type: "GET",
     url: "/recogito_integration/get",
@@ -75,11 +111,11 @@ function getAnnotations(recogito) {
     success: function (data) {
       for (annotation in data) {
         w3c = convert_annotation_w3c(data[annotation]);
-        recogito.addAnnotation(w3c);
+        recogito.addAnnotation(w3c, readonly);
       }
     },
     error: function (xhr, status, error) {
-      alert(xhr.responseText);
+      console.log(xhr.responseText);
     }
   });
 }
@@ -122,10 +158,11 @@ function initOpenSeadragonAnnnotation(perms) {
 
 
   image_anno.on('selectAnnotation', function (annotation) {
-    select_annotation(annotation);
+    adjustUIcomponentsByPermission(annotation);
   });
 
   image_anno.on('createAnnotation', function (annotation) {
+    console.log("createAnnotation");
     create_annotation(annotation);
   });
 
@@ -145,7 +182,7 @@ function initOpenSeadragonAnnnotation(perms) {
  *
  * @param a: annotation object
  */
-function select_annotation(a) {
+function adjustUIcomponentsByPermission(a) {
   var comment_count = 0;
   var tag_list = [];
   var perms = drupalSettings.recogito_integration.permissions;

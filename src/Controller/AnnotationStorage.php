@@ -407,7 +407,7 @@ class AnnotationStorage extends ControllerBase {
       ->condition('status', 1)
       ->condition('type', "annotation_textualbody")
       ->condition('field_annotation_purpose', 'tagging')
-      ->condition('field_annotation_value', $term->get('name')->value)
+      ->condition('field_annotation_value', ((isset($term)) ? $term->get('name')->value: ''))
       ->execute();
       if (count($tags) == 0) {
         $term->delete();
