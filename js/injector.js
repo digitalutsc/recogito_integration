@@ -1,5 +1,5 @@
 jQuery(document).ready(function () {
-  console.log(drupalSettings.recogito_integration);
+  //console.log(drupalSettings.recogito_integration);
   var can_read_annotations = false;
   var perms = drupalSettings.recogito_integration.permissions;
 
@@ -29,31 +29,37 @@ function initTextAnnotation(perms) {
 
   // need [0] because selector returns an array instead of object
   var attach_element = jQuery("article > div.node__content > div.field--name-body");
-  /*if (readOnly) {
-    attach_element = null;
-  }*/
+
+  // hide popup if readonly mode is currently set for current anonymous user
+  if (readOnly) {
+    jQuery("article > div.node__content > div.field--name-body").click(function(e) {
+      jQuery('.r6o-editor').hide();
+      if (e.target.tagName.toLowerCase() === 'span' && (jQuery(e.target).attr('class') === "r6o-annotation")) {
+        jQuery('.r6o-editor').show();
+      }
+    });
+  }
+
+
   for (var i = 0; i < attach_element.length; i++) {
     var text_anno = Recogito.init({
       content: attach_element[i], // Element id or DOM node to attach to
+      allowEmpty: true,
       locale: 'auto',
       readonly: readOnly,
       widgets: [
         'COMMENT',
         {widget: 'TAG', vocabulary: strings}
       ],
+      disableEditor: true,
       relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
     });
     text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
 
     getAnnotations(text_anno);
 
-    text_anno.on('createSelection', function (annotation) {
-      console.log("createSelection");
-    });
-
     text_anno.on('selectAnnotation', function (annotation) {
       // TODO: check if there is preset configuration ready before intial Recogito JS annotation
-      console.log("selectannotation");
       if (drupalSettings.recogito_integration.initial_setup)
         adjustUIcomponentsByPermission(annotation);
       else
@@ -61,7 +67,6 @@ function initTextAnnotation(perms) {
     });
 
     text_anno.on('createAnnotation', function (annotation) {
-      console.log("createAnnotation");
       // TODO: check if there is preset configuration ready before intial Recogito JS annotation
       if (drupalSettings.recogito_integration.initial_setup === false)
         alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
