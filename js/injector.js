@@ -1,5 +1,5 @@
 jQuery(document).ready(function () {
-  //console.log(drupalSettings.recogito_integration);
+  console.log(drupalSettings.recogito_integration);
   var can_read_annotations = false;
   var perms = drupalSettings.recogito_integration.permissions;
 
@@ -20,13 +20,14 @@ jQuery(document).ready(function () {
  */
 function initTextAnnotation(perms) {
   var user_data = drupalSettings.recogito_integration.user_data;
+  var customAttributeName = drupalSettings.recogito_integration.attach_attribute_name;
+  var range = drupalSettings.recogito_integration.annotation_range;
   var strings = drupalSettings.recogito_integration.taxonomy_terms;
   var readOnly = (!perms['recogito create annotations'] &&
     !perms['recogito edit annotations'] &&
     !perms['recogito delete annotations'] &&
     !perms['recogito edit own annotations'] &&
     !perms['recogito delete own annotations'])
-
 
   // hide popup if readonly mode is currently set for current anonymous user
   if (readOnly || window.location.search !== "?mode=annotation") {
@@ -43,64 +44,103 @@ function initTextAnnotation(perms) {
     jQuery(this).removeClass('is-active');
   });
 
-  // need [0] because selector returns an array instead of object
-  var attach_element = jQuery("article > div.node__content");
-  for (var i = 0; i < attach_element.length; i++) {
-    var text_anno = Recogito.init({
-      content: attach_element[i], // Element id or DOM node to attach to
-      allowEmpty: true,
-      locale: 'auto',
-      readonly: readOnly,
-      widgets: [
-        'COMMENT',
-        {widget: 'TAG', vocabulary: strings}
-      ],
-      disableEditor: true,
-      relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
-    });
-    text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
-
-    getAnnotations(text_anno);
-
-    text_anno.on('selectAnnotation', function (annotation) {
-      // TODO: check if there is preset configuration ready before intial Recogito JS annotation
-      if (drupalSettings.recogito_integration.initial_setup)
-        highlightAnnotatedContent(annotation);
-      else
-        alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
-    });
-
-    text_anno.on('createAnnotation', function (annotation) {
-      // TODO: check if there is preset configuration ready before intial Recogito JS annotation
-      if (drupalSettings.recogito_integration.initial_setup === false)
-        alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
-      else if (perms['recogito create annotations'] === false)
-        alert("Your annotation won't be saved because you don't have permission to create annotation for this content.")
-      else
-        create_annotation(annotation);
-    });
-
-    text_anno.on('updateAnnotation', function (annotation, previous) {
-      // TODO: check if there is preset configuration ready before intial Recogito JS annotation
-      if (drupalSettings.recogito_integration.initial_setup === false)
-        alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
-      else if (perms['recogito edit annotations'] === false)
-        alert("Your annotation won't be saved because you don't have permission to update this annotation of this content.")
-      else
-        update_annotation(annotation, previous);
-    });
-
-    text_anno.on('deleteAnnotation', function (annotation) {
-      // TODO: check if there is preset configuration ready before intial Recogito JS annotation
-
-      if (drupalSettings.recogito_integration.initial_setup === false)
-        alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
-      else if (perms['recogito delete annotations'] === false)
-        alert("Your annotation won't be saved because you don't have permission to update this annotation of this content.")
-      else
-        delete_annotation(annotation);
-    });
+  // Kyle added: special usecase : if Custom DOM mode is on, look and highlight and enable annotation for that DOM only
+  var attach_element = [-1];
+  if (range === "limited" && customAttributeName.length > 0) {
+    attach_element = [];
+    for (var j = 0; j < customAttributeName.length; j++) {
+      var element = jQuery(customAttributeName[j]);
+      if (customAttributeName[j].startsWith("#")) {
+        if (window.location.search == "?mode=annotation") {
+          element.css('background-color', '#dfeaff');
+        }
+        attach_element.push(element[0]);
+      }
+      else {
+        for (var k = 0; k < element.length; k++) {
+          if (window.location.search == "?mode=annotation") {
+            element[k].css('background-color', '#dfeaff');
+          }
+          attach_element.push(element[k]);
+        }
+      }
+    }
   }
+  else {
+    // change background for annotated area:
+    if (window.location.search == "?mode=annotation") {
+      jQuery("article > div.node__content").css('background-color', '#dfeaff');
+    }
+    var attach_element = jQuery("article > div.node__content");
+  }
+
+  // check  annotation are allow to be enable for DOM or content type. If not, display warning
+  if (attach_element[0] !== -1 ) {
+    // need [0] because selector returns an array instead of object
+    for (var i = 0; i < attach_element.length; i++) {
+      var text_anno = Recogito.init({
+        content: attach_element[i], // Element id or DOM node to attach to
+        allowEmpty: true,
+        locale: 'auto',
+        readonly: readOnly,
+        widgets: [
+          'COMMENT',
+          {widget: 'TAG', vocabulary: strings}
+        ],
+        disableEditor: true,
+        relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
+      });
+      text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
+
+      getAnnotations(text_anno);
+
+      text_anno.on('selectAnnotation', function (annotation) {
+        // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+        if (drupalSettings.recogito_integration.initial_setup)
+          highlightAnnotatedContent(annotation);
+        else
+          alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
+      });
+
+      text_anno.on('createAnnotation', function (annotation) {
+        // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+        if (drupalSettings.recogito_integration.initial_setup === false)
+          alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
+        else if (perms['recogito create annotations'] === false)
+          alert("Your annotation won't be saved because you don't have permission to create annotation for this content.")
+        else
+          create_annotation(annotation);
+      });
+
+      text_anno.on('updateAnnotation', function (annotation, previous) {
+        // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+        if (drupalSettings.recogito_integration.initial_setup === false)
+          alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
+        else if (perms['recogito edit annotations'] === false)
+          alert("Your annotation won't be saved because you don't have permission to update this annotation of this content.")
+        else
+          update_annotation(annotation, previous);
+      });
+
+      text_anno.on('deleteAnnotation', function (annotation) {
+        // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+
+        if (drupalSettings.recogito_integration.initial_setup === false)
+          alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
+        else if (perms['recogito delete annotations'] === false)
+          alert("Your annotation won't be saved because you don't have permission to update this annotation of this content.")
+        else
+          delete_annotation(annotation);
+      });
+    }
+  }
+  else {
+    if (window.location.search == "?mode=annotation") {
+      jQuery("article > div.node__content").html('<p><strong>Sorry, the annotation functionality for this content is not available because this content type is not set for annotation OR no preset class or ID can be found in this page\'s body.</strong> </p>' +
+        '<p>Please visit <a href="/admin/config/development/recogito_integration"> the configuration</a> for adjustment.</p>');
+    }
+  }
+
 }
 
 /**

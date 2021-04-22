@@ -5,19 +5,22 @@ namespace Drupal\recogito_integration\Form;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 
-class RecogitoIntegrationForm extends ConfigFormBase {
+class RecogitoIntegrationForm extends ConfigFormBase
+{
 
   /**
    * {@inheritdoc}
    */
-  public function getFormId() {
+  public function getFormId()
+  {
     return 'recogito_integration_form';
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, FormStateInterface $form_state) {
+  public function buildForm(array $form, FormStateInterface $form_state)
+  {
     $form = parent::buildForm($form, $form_state);
     $config = $this->config('recogito_integration.settings');
 
@@ -32,9 +35,8 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       }
     }
 
-
     $form['set-permission'] = array(
-      '#markup' => $this->t("<p><strong>For permission, please config who can create annotation for content at <a href='/admin/people/permissions'>here</a></strong></p>")
+      '#markup' => $this->t("<p><strong>For permission, please configure which user(s) can create, update, and delete annotation for content at <a href='/admin/people/permissions'>here</a></strong>.</p>")
     );
 
     $form['select-content-types'] = array(
@@ -43,6 +45,38 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       '#options' => $options_contentypes,
       '#default_value' => ($config->get('recogito_integration.content-type-to-annotated') !== null) ? array_keys(array_filter($config->get('recogito_integration.content-type-to-annotated'))) : [],
     );
+
+    $form['custom-annotation'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Custom'),
+      '#ajax' => [
+        'callback' => '::customModeCallback',
+        'wrapper' => 'container-custom-mode',
+        'effect' => 'fade',
+      ],
+      '#default_value' => ($config->get('recogito_integration.custom_dom') !== null) ? $config->get('recogito_integration.custom_dom') : 0,
+    ];
+
+
+    // Wrap textfields in a container. This container will be replaced through
+    // AJAX.
+    $form['custom_mode_container'] = [
+      '#type' => 'container',
+      '#attributes' => ['id' => 'container-custom-mode'],
+    ];
+
+    if (($form_state->getValue('custom-annotation', NULL) === null && $config->get('recogito_integration.custom_dom') !== null && $config->get('recogito_integration.custom_dom') === 1) || $form_state->getValue('custom-annotation', NULL) === 1) {
+      $form['custom_mode_container']['textfields'] = [
+        '#type' => 'fieldset',
+        '#title' => $this->t("Custom annotation configuration for HTML elements"),
+      ];
+      $form['custom_mode_container']['textfields']['attach_attribute_name'] = [
+        '#type' => 'textarea',
+        '#title' => $this->t('List of specific DOM Element(s) to attach the Recogito JS library to:'),
+        '#default_value' => $config->get('recogito_integration.attach_attribute_name'),
+        '#description' => $this->t('<strong><u>Note:</u></strong> One element per line. If it\'s class name, use dot("."). If it\'s ID, use "#". <br /><strong>For example:</strong> <br />.content<br />.body<br />#article-1<br />#article-2'),
+      ];
+    }
 
     /*$form['attach_attribute_type'] = [
       '#type' => 'select',
@@ -75,7 +109,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
     foreach ($vocabularies as $vocal) {
       $options_taxonomy[$vocal->id()] = $vocal->label();
     }
-    $form['annotation_vocab_name']  = array(
+    $form['annotation_vocab_name'] = array(
       '#type' => 'radios',
       '#title' => $this->t('Annotation Vocabulary Name:'),
       '#options' => $options_taxonomy,
@@ -83,36 +117,56 @@ class RecogitoIntegrationForm extends ConfigFormBase {
     );
 
     return $form;
-    }
+  }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function validateForm(array &$form, FormStateInterface $form_state) {
-
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function submitForm(array &$form, FormStateInterface $form_state) {
-      $config = $this->config('recogito_integration.settings');
-      $config->set('recogito_integration.initialsetup', true);
-      //$config->set('recogito_integration.attach_attribute_name', $form_state->getValue('attach_attribute_name'));
-      $config->set('recogito_integration.content-type-to-annotated', $form_state->getValues()['select-content-types']);
-      $config->set('recogito_integration.annotation_vocab_name', $form_state->getValue('annotation_vocab_name'));
-      $config->save();
-      return parent::submitForm($form, $form_state);
-    }
-
-        /**
-     * {@inheritdoc}
-     */
-    protected function getEditableConfigNames() {
-      return [
-        'recogito_integration.settings',
-      ];
-    }
-
+  /**
+   * {@inheritdoc}
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state)
+  {
 
   }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function submitForm(array &$form, FormStateInterface $form_state)
+  {
+    $config = $this->config('recogito_integration.settings');
+    $config->set('recogito_integration.initialsetup', true);
+    if ($form_state->getValues()['custom-annotation'] === 1 && $form_state->getValue('attach_attribute_name') !== null)  {
+      $config->set('recogito_integration.attach_attribute_name', $form_state->getValue('attach_attribute_name'));
+    }
+    $config->set('recogito_integration.custom_dom', $form_state->getValues()['custom-annotation']);
+    if ($form_state->getValues()['custom-annotation'] === 0) {
+      $config->set('recogito_integration.attach_attribute_name', "");
+    }
+    $config->set('recogito_integration.content-type-to-annotated', $form_state->getValues()['select-content-types']);
+    $config->set('recogito_integration.annotation_vocab_name', $form_state->getValue('annotation_vocab_name'));
+    $config->save();
+    return parent::submitForm($form, $form_state);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function getEditableConfigNames()
+  {
+    return [
+      'recogito_integration.settings',
+    ];
+  }
+
+  /**
+   * Callback for ajax_example_autotextfields.
+   *
+   * Selects the piece of the form we want to use as replacement markup and
+   * returns it as a form (renderable array).
+   */
+  public function customModeCallback($form, FormStateInterface $form_state)
+  {
+    return $form['custom_mode_container'];
+  }
+
+
+}

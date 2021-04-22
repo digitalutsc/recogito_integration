@@ -4,7 +4,13 @@ use Drupal\taxonomy\Entity\Term;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
 
-
+/**
+ * Implement hook_page_attachments
+ *
+ * @param array $attachments
+ * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+ * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+ */
 function recogito_integration_page_attachments(array &$attachments)
 {
   if (!\Drupal::service('router.admin_context')->isAdminRoute()) {
@@ -13,7 +19,9 @@ function recogito_integration_page_attachments(array &$attachments)
     $node = \Drupal::routeMatch()->getParameter('node');
     $anno_contenttypes = \Drupal::config('recogito_integration.settings')->get('recogito_integration.content-type-to-annotated');
 
-    if (isset($node) && in_array($node->bundle(), array_filter(array_values($anno_contenttypes)))) {
+    $custom_mode = \Drupal::config('recogito_integration.settings')->get('recogito_integration.custom_dom')=== 1 && !empty(\Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name'));
+    if (isset($node) && (in_array($node->bundle(), array_filter(array_values($anno_contenttypes))) ||  $custom_mode=== true )) {
+      \Drupal::service('page_cache_kill_switch')->trigger();
       $vid = \Drupal::config('recogito_integration.settings')->get('recogito_integration.annotation_vocab_name');
       $terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vid);
 
@@ -45,8 +53,13 @@ function recogito_integration_page_attachments(array &$attachments)
           ? \Drupal::config('recogito_integration.settings')->get('recogito_integration.initialsetup') : false;
 
       //$attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_type'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_type');
-      //$attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_name'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name');
+      if (\Drupal::config('recogito_integration.settings')->get('recogito_integration.custom_dom') === 1)
+        $attachments['#attached']['drupalSettings']['recogito_integration']['annotation_range'] = (in_array($node->bundle(), array_filter(array_values($anno_contenttypes)))) ? "full" : 'limited';
+        $customDom = explode("\n",\Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name'));
 
+        $attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_name'] = $customDom;
+
+      // Kyle added for show readonly for node view (eg node/1) for logged in user, diverting usage for annotation to Add/Edit annotation tab
       $route_name = \Drupal::routeMatch()->getRouteName();
       if (\Drupal::currentUser()->isAuthenticated() && $route_name === "entity.node.canonical") {
         $attachments['#attached']['drupalSettings']['recogito_integration']['admin_view_mode'] = true;
@@ -58,13 +71,15 @@ function recogito_integration_page_attachments(array &$attachments)
       //$attachments['#attached']['library'][] = 'openseadragon/init';
       $attachments['#attached']['library'][] = 'recogito_integration/recogito_injection';
     }
-
-
-
   }
 }
 
-
+/**
+ * Implement hook_entity_operation_alter
+ *
+ * @param array $operations
+ * @param $entity
+ */
 function recogito_integration_entity_operation_alter(array &$operations, $entity)
 {
   print_log("recogito_integration_entity_operation_alter");
@@ -115,12 +130,19 @@ function recogito_integration_entity_operation_alter(array &$operations, $entity
   }
 }
 
+/**
+ * Implement hook_menu_local_tasks_alter
+ *
+ * @param $data
+ * @param $route_name
+ * @param \Drupal\Core\Cache\RefinableCacheableDependencyInterface $cacheability
+ */
 function recogito_integration_menu_local_tasks_alter(&$data, $route_name, \Drupal\Core\Cache\RefinableCacheableDependencyInterface &$cacheability)
 {
   $anno_contenttypes = \Drupal::config('recogito_integration.settings')->get('recogito_integration.content-type-to-annotated');
   $node = \Drupal::routeMatch()->getParameter('node');
-
-  if (\Drupal::currentUser()->isAuthenticated() && isset($node) && in_array($node->bundle(), array_filter(array_values($anno_contenttypes)))) {
+  $custom_mode = \Drupal::config('recogito_integration.settings')->get('recogito_integration.custom_dom') === 1 && !empty(\Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name'));
+  if (\Drupal::currentUser()->isAuthenticated() && isset($node) && (in_array($node->bundle(), array_filter(array_values($anno_contenttypes))) || $custom_mode=== true)) {
 
     if (isset($node)) {
       // Add a tab linking to node/add to all pages.
@@ -141,6 +163,8 @@ function recogito_integration_menu_local_tasks_alter(&$data, $route_name, \Drupa
 }
 
 /**
+ * Generate by alias
+ *
  * @param $alias
  *
  * @return int|string
