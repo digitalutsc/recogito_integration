@@ -47,9 +47,35 @@ function recogito_integration_page_attachments(array &$attachments)
       //$attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_type'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_type');
       //$attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_name'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name');
 
+      /*
+      $route_name = \Drupal::routeMatch()->getRouteName();
+      if (\Drupal::currentUser()->isAuthenticated() && $route_name === "entity.node.canonical") {
+       $perms = [
+         'recogito view annotations' => true,
+         'recogito create annotations' => false,
+         'recogito edit annotations' => false,
+         'recogito delete annotations' => false,
+         'recogito edit own annotations' => false,
+         'recogito delete own annotations' => false
+       ];
+       $attachments['#attached']['drupalSettings']['recogito_integration']['permissions'] = $perms;
+      }
+      */
+
+      $route_name = \Drupal::routeMatch()->getRouteName();
+      if (\Drupal::currentUser()->isAuthenticated() && $route_name === "entity.node.canonical") {
+        $attachments['#attached']['drupalSettings']['recogito_integration']['admin_view_mode'] = true;
+      }
+      else {
+        $attachments['#attached']['drupalSettings']['recogito_integration']['admin_view_mode'] = false;
+      }
+
       //$attachments['#attached']['library'][] = 'openseadragon/init';
       $attachments['#attached']['library'][] = 'recogito_integration/recogito_injection';
     }
+
+
+
   }
 }
 
@@ -106,29 +132,24 @@ function recogito_integration_entity_operation_alter(array &$operations, $entity
 
 function recogito_integration_menu_local_tasks_alter(&$data, $route_name, \Drupal\Core\Cache\RefinableCacheableDependencyInterface &$cacheability)
 {
-  $node = \Drupal::routeMatch()->getParameter('node');
-  if (isset($node)) {
-    // Add a tab linking to node/add to all pages.
-    $data['tabs'][0]['node.add_page'] = [
-      '#theme' => 'menu_local_task',
-      '#link' => [
-        'title' => t('Add/Edit Annotation'),
-        'url' => Url::fromRoute("entity.node.canonical", ['node' => $node->id()], ['query' => ['mode'=> 'annotation']]),
-        'localized_options' => [
-          'attributes' => [
-            'title' => t('Annotation Enabled'),
+  if (\Drupal::currentUser()->isAuthenticated()) {
+    $node = \Drupal::routeMatch()->getParameter('node');
+    if (isset($node)) {
+      // Add a tab linking to node/add to all pages.
+      $data['tabs'][0]['node.add_page'] = [
+        '#theme' => 'menu_local_task',
+        '#link' => [
+          'title' => t('Add/Edit Annotation'),
+          'url' => Url::fromRoute("entity.node.canonical", ['node' => $node->id()], ['query' => ['mode'=> 'annotation']]),
+          'localized_options' => [
+            'attributes' => [
+              'title' => t('Annotation Enabled'),
+            ],
           ],
         ],
-      ],
-    ];
-
-    // The tab we're adding is dependent on a user's access to add content.
-    $cacheability
-      ->addCacheTags([
-        'user.permissions',
-      ]);
+      ];
+    }
   }
-
 }
 
 /**

@@ -286,7 +286,6 @@ class AnnotationStorage extends ControllerBase {
   */
   public function updateAnnotationNode($nid, $annotation)
   {
-
       // update existing Annotation node
       $annotationNode = Node::load($nid);
       if (isset($annotationNode)) {

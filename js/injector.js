@@ -20,7 +20,6 @@ jQuery(document).ready(function () {
  */
 function initTextAnnotation(perms) {
   var user_data = drupalSettings.recogito_integration.user_data;
-  var admin_view_mode = drupalSettings.recogito_integration.admin_view_mode;
   var strings = drupalSettings.recogito_integration.taxonomy_terms;
   var readOnly = (!perms['recogito create annotations'] &&
     !perms['recogito edit annotations'] &&
@@ -28,9 +27,6 @@ function initTextAnnotation(perms) {
     !perms['recogito edit own annotations'] &&
     !perms['recogito delete own annotations'])
 
-
-  // need [0] because selector returns an array instead of object
-  var attach_element = jQuery("article > div.node__content > div.field--name-body");
 
   // hide popup if readonly mode is currently set for current anonymous user
   if (readOnly || window.location.search !== "?mode=annotation") {
@@ -47,6 +43,8 @@ function initTextAnnotation(perms) {
     jQuery(this).removeClass('is-active');
   });
 
+  // need [0] because selector returns an array instead of object
+  var attach_element = jQuery("article > div.node__content");
   for (var i = 0; i < attach_element.length; i++) {
     var text_anno = Recogito.init({
       content: attach_element[i], // Element id or DOM node to attach to
@@ -67,7 +65,7 @@ function initTextAnnotation(perms) {
     text_anno.on('selectAnnotation', function (annotation) {
       // TODO: check if there is preset configuration ready before intial Recogito JS annotation
       if (drupalSettings.recogito_integration.initial_setup)
-        adjustUIcomponentsByPermission(annotation);
+        highlightAnnotatedContent(annotation);
       else
         alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
     });
@@ -169,7 +167,7 @@ function initOpenSeadragonAnnnotation(perms) {
 
 
   image_anno.on('selectAnnotation', function (annotation) {
-    adjustUIcomponentsByPermission(annotation);
+    highlightAnnotatedContent(annotation);
   });
 
   image_anno.on('createAnnotation', function (annotation) {
@@ -193,7 +191,7 @@ function initOpenSeadragonAnnnotation(perms) {
  *
  * @param a: annotation object
  */
-function adjustUIcomponentsByPermission(a) {
+function highlightAnnotatedContent(a) {
   var comment_count = 0;
   var tag_list = [];
   var perms = drupalSettings.recogito_integration.permissions;
@@ -210,9 +208,21 @@ function adjustUIcomponentsByPermission(a) {
   //Show and hide specific features depending on permissions
   (function loopSearch() {
     if (jQuery('.r6o-widget').length == comment_count + 2) { //Work once all comments have been loaded
-      if (!perms['recogito create annotations'] && !perms['recogito edit annotations'] && !perms['recogito delete annotations'] && !perms['recogito edit own annotations'] && !perms['recogito delete own annotations']) {
+
+      // Kyle added to have Admin user 's view (eg. /node/1) page has readonly mode only
+      var readOnly = false;
+      console.log(drupalSettings.recogito_integration.admin_view_mode);
+      if (drupalSettings.recogito_integration.admin_view_mode === true && window.location.search !== "?mode=annotation") {
+        readOnly = true;
+      }
+      else {
+        readOnly = (!perms['recogito create annotations'] && !perms['recogito edit annotations'] && !perms['recogito delete annotations'] && !perms['recogito edit own annotations'] && !perms['recogito delete own annotations']);
+      }
+      if (readOnly) {
         jQuery('.r6o-arrow-down').hide();
       }
+
+      // loop through replies to enfource Readonly mode or not
       jQuery('.r6o-widget').each(function (index) {
         var commentorname = jQuery(this).find('.r6o-lastmodified-by').text();
         if (commentorname == user_data.displayName) {
