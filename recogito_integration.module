@@ -1,10 +1,12 @@
 <?php
+
 use Drupal\taxonomy\Entity\Term;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
 
 
-function recogito_integration_page_attachments(array &$attachments) {
+function recogito_integration_page_attachments(array &$attachments)
+{
   if (!\Drupal::service('router.admin_context')->isAdminRoute()) {
 
     // check if current node type which set to be annotated by configuration.
@@ -52,7 +54,8 @@ function recogito_integration_page_attachments(array &$attachments) {
 }
 
 
-function recogito_integration_entity_operation_alter(array &$operations, $entity) {
+function recogito_integration_entity_operation_alter(array &$operations, $entity)
+{
   print_log("recogito_integration_entity_operation_alter");
   $entityTypeId = $entity->getEntityTypeId();
 
@@ -62,7 +65,7 @@ function recogito_integration_entity_operation_alter(array &$operations, $entity
 
   $nodeType = $entity->getType();
   if (!isset($nodeType)) {
-        return;
+    return;
   }
 
 
@@ -70,9 +73,8 @@ function recogito_integration_entity_operation_alter(array &$operations, $entity
     $anno_collection_url = $entity->get('field_annotation_collection_url')->getValue()[0]['value'];
     if (isset($anno_collection_url)) {
       if (str_contains($anno_collection_url, "/node/")) {
-        $nodeId = explode("/",$anno_collection_url)[2];
-      }
-      else {
+        $nodeId = explode("/", $anno_collection_url)[2];
+      } else {
         $node = getNodeIdByAlias($anno_collection_url);
         $nodeId = $node->id();
       }
@@ -102,17 +104,44 @@ function recogito_integration_entity_operation_alter(array &$operations, $entity
   }
 }
 
+function recogito_integration_menu_local_tasks_alter(&$data, $route_name, \Drupal\Core\Cache\RefinableCacheableDependencyInterface &$cacheability)
+{
+  $node = \Drupal::routeMatch()->getParameter('node');
+  if (isset($node)) {
+    // Add a tab linking to node/add to all pages.
+    $data['tabs'][0]['node.add_page'] = [
+      '#theme' => 'menu_local_task',
+      '#link' => [
+        'title' => t('Add/Edit Annotation'),
+        'url' => Url::fromRoute("entity.node.canonical", ['node' => $node->id()], ['query' => ['mode'=> 'annotation']]),
+        'localized_options' => [
+          'attributes' => [
+            'title' => t('Annotation Enabled'),
+          ],
+        ],
+      ],
+    ];
+
+    // The tab we're adding is dependent on a user's access to add content.
+    $cacheability
+      ->addCacheTags([
+        'user.permissions',
+      ]);
+  }
+
+}
 
 /**
  * @param $alias
  *
  * @return int|string
  */
-function getNodeIdByAlias(string $alias) {
+function getNodeIdByAlias(string $alias)
+{
   print_log($alias);
   $node = NULL;
   $path = \Drupal::service('path_alias.manager')->getPathByAlias($alias);
-  if(preg_match('/node\/(\d+)/', $path, $matches)) {
+  if (preg_match('/node\/(\d+)/', $path, $matches)) {
     $node = \Drupal\node\Entity\Node::load($matches[1]);
   }
   return $node;

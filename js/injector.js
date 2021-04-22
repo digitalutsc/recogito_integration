@@ -20,6 +20,7 @@ jQuery(document).ready(function () {
  */
 function initTextAnnotation(perms) {
   var user_data = drupalSettings.recogito_integration.user_data;
+  var admin_view_mode = drupalSettings.recogito_integration.admin_view_mode;
   var strings = drupalSettings.recogito_integration.taxonomy_terms;
   var readOnly = (!perms['recogito create annotations'] &&
     !perms['recogito edit annotations'] &&
@@ -27,11 +28,12 @@ function initTextAnnotation(perms) {
     !perms['recogito edit own annotations'] &&
     !perms['recogito delete own annotations'])
 
+
   // need [0] because selector returns an array instead of object
   var attach_element = jQuery("article > div.node__content > div.field--name-body");
 
   // hide popup if readonly mode is currently set for current anonymous user
-  if (readOnly) {
+  if (readOnly || window.location.search !== "?mode=annotation") {
     jQuery("article > div.node__content > div.field--name-body").click(function(e) {
       jQuery('.r6o-editor').hide();
       if (e.target.tagName.toLowerCase() === 'span' && (jQuery(e.target).attr('class') === "r6o-annotation")) {
@@ -40,6 +42,10 @@ function initTextAnnotation(perms) {
     });
   }
 
+  // visually set Annotation tab item enabled
+  jQuery("ul.primary > li").each(function( index ) {
+    jQuery(this).removeClass('is-active');
+  });
 
   for (var i = 0; i < attach_element.length; i++) {
     var text_anno = Recogito.init({
