@@ -82,7 +82,6 @@ function recogito_integration_page_attachments(array &$attachments)
  */
 function recogito_integration_entity_operation_alter(array &$operations, $entity)
 {
-  print_log("recogito_integration_entity_operation_alter");
   $entityTypeId = $entity->getEntityTypeId();
 
   if ($entityTypeId !== 'node') {
@@ -141,8 +140,10 @@ function recogito_integration_menu_local_tasks_alter(&$data, $route_name, \Drupa
 {
   $anno_contenttypes = \Drupal::config('recogito_integration.settings')->get('recogito_integration.content-type-to-annotated');
   $node = \Drupal::routeMatch()->getParameter('node');
+  print_log(get_class($node));
   $custom_mode = \Drupal::config('recogito_integration.settings')->get('recogito_integration.custom_dom') === 1 && !empty(\Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name'));
-  if (\Drupal::currentUser()->isAuthenticated() && isset($node) && (in_array($node->bundle(), array_filter(array_values($anno_contenttypes))) || $custom_mode=== true)) {
+  if (\Drupal::currentUser()->isAuthenticated() && isset($node) && is_object($node) && get_class($node) === 'Drupal\node\Entity\Node'
+    && (in_array($node->bundle(), array_filter(array_values($anno_contenttypes))) || $custom_mode=== true)) {
 
     if (isset($node)) {
       // Add a tab linking to node/add to all pages.
