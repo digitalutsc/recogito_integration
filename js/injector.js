@@ -87,7 +87,6 @@ function initTextAnnotation(perms) {
           'COMMENT',
           {widget: 'TAG', vocabulary: strings}
         ],
-        disableEditor: true,
         relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
       });
       text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});

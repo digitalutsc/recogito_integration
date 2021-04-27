@@ -28,6 +28,7 @@ function recogito_integration_page_attachments(array &$attachments)
       $term_array = array();
       foreach ($terms as $term) {
         $term_obj = Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($term->tid);
+
         array_push($term_array, $term->name);
       }
       $attachments['#attached']['drupalSettings']['recogito_integration']['taxonomy_terms'] = $term_array;
@@ -75,6 +76,151 @@ function recogito_integration_page_attachments(array &$attachments)
 }
 
 /**
+ * Implement hook_entity_delete
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+ * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+ * @throws \Drupal\Core\Entity\EntityStorageException
+ */
+function recogito_integration_entity_delete(Drupal\Core\Entity\EntityInterface $entity) {
+  if (!in_array($entity->bundle(), array("annotation_collection", "annotation", "annotation_textualbody"))) {
+    // get annotation collection based on entity object
+    $annotation_collection = array_values(getAnnotationCollection($entity));
+
+    // loop through each collection to pull out annotations list
+    foreach ($annotation_collection as $collection){
+      // get annotation reference from annotation_collection
+      $anno_refs = $collection->get("field_annotation_reference")->getValue();
+      foreach ($anno_refs as $ref) {
+        // query annotation node from reference
+        $anno = \Drupal::entityTypeManager()->getStorage('node')->load($ref['target_id']);
+
+        // delete annotation textualbody related to annotation
+        $txtbd_reff = $anno->get("field_annotation_textualbodies")->getValue();
+        deleteAnnotationTextualBody($txtbd_reff);
+
+        // then delete annotation node
+        $anno->delete();
+      }
+      // finally, delete annotation colection
+      $collection->delete();
+    }
+
+  }
+}
+
+/**
+ * Get All of annotation components by node
+ * @param $entity
+ */
+function getAnnotationComponentsByNode($entity) {
+  // get annotation collection based on entity object
+  $annotation_collection = array_values(getAnnotationCollection($entity));
+
+  // loop through each collection to pull out annotations list
+  foreach ($annotation_collection as $collection){
+    $anno_refs = $collection->get("field_annotation_reference")->getValue();
+    //print_log($anno_refs);
+    $annotations = getAnnotation($anno_refs);
+  }
+  //print_log(($annotations));
+
+  foreach ($annotations as $anid => $anno) {
+    $textbody = getAnnotationTextualBody($anno->get("field_annotation_textualbodies")->getValue());
+  }
+}
+
+/**
+ * Query Annotation Collection base on url / alias
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ */
+function getAnnotationCollection(\Drupal\Core\Entity\EntityInterface $entity) {
+  $alias = \Drupal::service('path_alias.manager')->getAliasByPath('/node/'.$entity->id());
+  if (str_starts_with($alias, "/node/") ) {
+    $url = "$alias";
+  }
+  else {
+    $url = '/node/'.$entity->id();
+  }
+
+  return \Drupal::entityTypeManager()
+    ->getListBuilder('node')
+    ->getStorage()
+    ->loadByProperties([
+      'type' => 'annotation_collection',
+      'field_annotation_collection_url' => $url,
+      'status' => 1,
+    ]);
+}
+
+/**
+ * Get annotation object from annotation reference
+ *
+ * @param array $anno_refs
+ * @return array
+ * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+ * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+ */
+function getAnnotation (array $anno_refs) {
+  $annotations = [];
+  foreach ($anno_refs as $ref) {
+    $anno = \Drupal::entityTypeManager()->getStorage('node')->load($ref['target_id']);
+    $annotations[$ref['target_id']] = $anno;
+  }
+  return $annotations;
+}
+
+/**
+ * delete annotation object from annotation reference
+ *
+ * @param array $anno_refs
+ * @return array
+ * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+ * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+ */
+function deleteAnnotation(array $anno_refs) {
+  foreach ($anno_refs as $ref) {
+    $anno = \Drupal::entityTypeManager()->getStorage('node')->load($ref['target_id']);
+    $anno->delete();
+  }
+}
+
+/**
+ * Get annotation textualbody from textualbody references
+ *
+ * @param array $txtbody_refs
+ * @return array
+ * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+ * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+ */
+function getAnnotationTextualBody(array $txtbody_refs)  {
+  $anno_txtbody_refs = [];
+  foreach ($txtbody_refs as $ref) {
+    $anno = \Drupal::entityTypeManager()->getStorage('node')->load($ref['target_id']);
+    $anno_txtbody_refs[$ref['target_id']] = $anno;
+  }
+  return $anno_txtbody_refs;
+}
+
+/**
+ * delete annotation textualbody from textualbody references
+ *
+ * @param array $txtbody_refs
+ * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+ * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+ * @throws \Drupal\Core\Entity\EntityStorageException
+ */
+function deleteAnnotationTextualBody(array $txtbody_refs)  {
+  print_log(deleteAnnotationTextualBody);
+  print_log($txtbody_refs);
+  foreach ($txtbody_refs as $ref) {
+    $textualbody = \Drupal::entityTypeManager()->getStorage('node')->load($ref['target_id']);
+    $textualbody->delete();
+  }
+}
+
+
+/**
  * Implement hook_entity_operation_alter
  *
  * @param array $operations
@@ -93,7 +239,6 @@ function recogito_integration_entity_operation_alter(array &$operations, $entity
     return;
   }
 
-
   if ($nodeType === "annotation_collection") {
     $anno_collection_url = $entity->get('field_annotation_collection_url')->getValue()[0]['value'];
     if (isset($anno_collection_url)) {
@@ -104,8 +249,6 @@ function recogito_integration_entity_operation_alter(array &$operations, $entity
         $nodeId = $node->id();
       }
 
-
-      print_log($nodeId);
       $editUrl = Url::fromRoute('entity.node.canonical', ['node' => $nodeId]);
       $operations['preview_operation'] = array(
         'title' => t('Demo'),
@@ -115,7 +258,6 @@ function recogito_integration_entity_operation_alter(array &$operations, $entity
     }
 
   }
-
 
   $nodeId = $entity->id();
   if (in_array($nodeType, ['annotation_collection', 'annotation', 'annotation_textualbody'])) {
@@ -140,7 +282,7 @@ function recogito_integration_menu_local_tasks_alter(&$data, $route_name, \Drupa
 {
   $anno_contenttypes = \Drupal::config('recogito_integration.settings')->get('recogito_integration.content-type-to-annotated');
   $node = \Drupal::routeMatch()->getParameter('node');
-  print_log(get_class($node));
+
   $custom_mode = \Drupal::config('recogito_integration.settings')->get('recogito_integration.custom_dom') === 1 && !empty(\Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name'));
   if (\Drupal::currentUser()->isAuthenticated() && isset($node) && is_object($node) && get_class($node) === 'Drupal\node\Entity\Node'
     && (in_array($node->bundle(), array_filter(array_values($anno_contenttypes))) || $custom_mode=== true)) {

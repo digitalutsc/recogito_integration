@@ -44,6 +44,7 @@ class RecogitoIntegrationForm extends ConfigFormBase
       '#title' => t('Which content type(s) to be annotated:'),
       '#options' => $options_contentypes,
       '#default_value' => ($config->get('recogito_integration.content-type-to-annotated') !== null) ? array_keys(array_filter($config->get('recogito_integration.content-type-to-annotated'))) : [],
+      '#required' => true,
     );
 
     $form['custom-annotation'] = [
@@ -114,6 +115,7 @@ class RecogitoIntegrationForm extends ConfigFormBase
       '#title' => $this->t('Annotation Vocabulary Name:'),
       '#options' => $options_taxonomy,
       '#default_value' => $config->get('recogito_integration.annotation_vocab_name'),
+      '#required' => true,
     );
 
     return $form;
