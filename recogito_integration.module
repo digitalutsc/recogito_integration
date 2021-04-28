@@ -82,11 +82,38 @@ function recogito_integration_page_attachments(array &$attachments)
  * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
  * @throws \Drupal\Core\Entity\EntityStorageException
  */
-function recogito_integration_entity_delete(Drupal\Core\Entity\EntityInterface $entity) {
-  if (!in_array($entity->bundle(), array("annotation_collection", "annotation", "annotation_textualbody"))) {
+function recogito_integration_entity_predelete(\Drupal\Core\Entity\EntityInterface $entity) {
+  _deleteAnnotations($entity);
+}
+
+/**
+ * Implement hook_entity_view
+ *
+ * @param array $build
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ * @param \Drupal\Core\Entity\Display\EntityViewDisplayInterface $display
+ * @param $view_mode
+ * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+ * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+ * @throws \Drupal\Core\Entity\EntityStorageException
+ */
+function recogito_integration_entity_view(array &$build, \Drupal\Core\Entity\EntityInterface $entity, \Drupal\Core\Entity\Display\EntityViewDisplayInterface $display, $view_mode) {
+  _deleteAnnotations($entity);
+}
+
+/**
+ * Delete annotation and childen components
+ *
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+ * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+ * @throws \Drupal\Core\Entity\EntityStorageException
+ */
+function _deleteAnnotations(\Drupal\Core\Entity\EntityInterface $entity) {
+  if (!in_array($entity->bundle(), array("path_alias", "annotation_collection", "annotation", "annotation_textualbody"))) {
+
     // get annotation collection based on entity object
     $annotation_collection = array_values(getAnnotationCollection($entity));
-
     // loop through each collection to pull out annotations list
     foreach ($annotation_collection as $collection){
       // get annotation reference from annotation_collection
@@ -136,13 +163,12 @@ function getAnnotationComponentsByNode($entity) {
  */
 function getAnnotationCollection(\Drupal\Core\Entity\EntityInterface $entity) {
   $alias = \Drupal::service('path_alias.manager')->getAliasByPath('/node/'.$entity->id());
-  if (str_starts_with($alias, "/node/") ) {
-    $url = "$alias";
+  if (!str_starts_with($alias, "/node/") ) {
+    $url = $alias;
   }
   else {
     $url = '/node/'.$entity->id();
   }
-
   return \Drupal::entityTypeManager()
     ->getListBuilder('node')
     ->getStorage()
@@ -211,8 +237,6 @@ function getAnnotationTextualBody(array $txtbody_refs)  {
  * @throws \Drupal\Core\Entity\EntityStorageException
  */
 function deleteAnnotationTextualBody(array $txtbody_refs)  {
-  print_log(deleteAnnotationTextualBody);
-  print_log($txtbody_refs);
   foreach ($txtbody_refs as $ref) {
     $textualbody = \Drupal::entityTypeManager()->getStorage('node')->load($ref['target_id']);
     $textualbody->delete();
@@ -246,7 +270,12 @@ function recogito_integration_entity_operation_alter(array &$operations, $entity
         $nodeId = explode("/", $anno_collection_url)[2];
       } else {
         $node = getNodeIdByAlias($anno_collection_url);
-        $nodeId = $node->id();
+        if (isset($node)) {
+          $nodeId = $node->id();
+        }
+        else {
+          return;
+        }
       }
 
       $editUrl = Url::fromRoute('entity.node.canonical', ['node' => $nodeId]);
@@ -314,7 +343,6 @@ function recogito_integration_menu_local_tasks_alter(&$data, $route_name, \Drupa
  */
 function getNodeIdByAlias(string $alias)
 {
-  print_log($alias);
   $node = NULL;
   $path = \Drupal::service('path_alias.manager')->getPathByAlias($alias);
   if (preg_match('/node\/(\d+)/', $path, $matches)) {
