@@ -19,8 +19,8 @@ function recogito_integration_page_attachments(array &$attachments)
     $node = \Drupal::routeMatch()->getParameter('node');
     $anno_contenttypes = \Drupal::config('recogito_integration.settings')->get('recogito_integration.content-type-to-annotated');
 
-    $custom_mode = \Drupal::config('recogito_integration.settings')->get('recogito_integration.custom_dom')=== 1 && !empty(\Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name'));
-    if (isset($node) && (in_array($node->bundle(), array_filter(array_values($anno_contenttypes))) ||  $custom_mode=== true )) {
+    $custom_mode = \Drupal::config('recogito_integration.settings')->get('recogito_integration.custom_dom') === 1 && !empty(\Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name'));
+    if (isset($node) && (in_array($node->bundle(), array_filter(array_values($anno_contenttypes))) || $custom_mode === true)) {
       \Drupal::service('page_cache_kill_switch')->trigger();
       $vid = \Drupal::config('recogito_integration.settings')->get('recogito_integration.annotation_vocab_name');
       $terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vid);
@@ -56,16 +56,15 @@ function recogito_integration_page_attachments(array &$attachments)
       //$attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_type'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_type');
       if (\Drupal::config('recogito_integration.settings')->get('recogito_integration.custom_dom') === 1)
         $attachments['#attached']['drupalSettings']['recogito_integration']['annotation_range'] = (in_array($node->bundle(), array_filter(array_values($anno_contenttypes)))) ? "full" : 'limited';
-        $customDom = explode("\n",\Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name'));
+      $customDom = explode("\n", \Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name'));
 
-        $attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_name'] = $customDom;
+      $attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_name'] = $customDom;
 
       // Kyle added for show readonly for node view (eg node/1) for logged in user, diverting usage for annotation to Add/Edit annotation tab
       $route_name = \Drupal::routeMatch()->getRouteName();
       if (\Drupal::currentUser()->isAuthenticated() && $route_name === "entity.node.canonical") {
         $attachments['#attached']['drupalSettings']['recogito_integration']['admin_view_mode'] = true;
-      }
-      else {
+      } else {
         $attachments['#attached']['drupalSettings']['recogito_integration']['admin_view_mode'] = false;
       }
 
@@ -82,7 +81,8 @@ function recogito_integration_page_attachments(array &$attachments)
  * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
  * @throws \Drupal\Core\Entity\EntityStorageException
  */
-function recogito_integration_entity_predelete(\Drupal\Core\Entity\EntityInterface $entity) {
+function recogito_integration_entity_predelete(\Drupal\Core\Entity\EntityInterface $entity)
+{
   _deleteAnnotations($entity);
 }
 
@@ -97,8 +97,26 @@ function recogito_integration_entity_predelete(\Drupal\Core\Entity\EntityInterfa
  * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
  * @throws \Drupal\Core\Entity\EntityStorageException
  */
-function recogito_integration_entity_view(array &$build, \Drupal\Core\Entity\EntityInterface $entity, \Drupal\Core\Entity\Display\EntityViewDisplayInterface $display, $view_mode) {
+function recogito_integration_entity_view(array &$build, \Drupal\Core\Entity\EntityInterface $entity, \Drupal\Core\Entity\Display\EntityViewDisplayInterface $display, $view_mode)
+{
 
+}
+
+function recogito_integration_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id)
+{
+  // change the confirming message for delete a node with annotation associated with it.
+  $nid = explode(":", $form['#cache']['tags'][0])[1];
+
+  if (isset($nid)) {
+    $node = \Drupal::entityTypeManager()->getStorage('node')->load($nid);
+
+    // get annotation collection based on entity object
+    $annotation_collection = array_values(getAnnotationCollection($node));
+
+    if (count($annotation_collection) > 0) {
+      $form['description']['#markup'] = '<strong><u>Warning</u>:</strong> This page (or node) currently contains annotations. Deleting this node will also deleting the annotation which are associated with it. <strong>This action cannot be undone</strong>.';
+    }
+  }
 }
 
 /**
@@ -109,13 +127,14 @@ function recogito_integration_entity_view(array &$build, \Drupal\Core\Entity\Ent
  * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
  * @throws \Drupal\Core\Entity\EntityStorageException
  */
-function _deleteAnnotations(\Drupal\Core\Entity\EntityInterface $entity) {
+function _deleteAnnotations(\Drupal\Core\Entity\EntityInterface $entity)
+{
   if (!in_array($entity->bundle(), array("path_alias", "annotation_collection", "annotation", "annotation_textualbody"))) {
 
     // get annotation collection based on entity object
     $annotation_collection = array_values(getAnnotationCollection($entity));
     // loop through each collection to pull out annotations list
-    foreach ($annotation_collection as $collection){
+    foreach ($annotation_collection as $collection) {
       // get annotation reference from annotation_collection
       $anno_refs = $collection->get("field_annotation_reference")->getValue();
       foreach ($anno_refs as $ref) {
@@ -143,12 +162,13 @@ function _deleteAnnotations(\Drupal\Core\Entity\EntityInterface $entity) {
  * Get All of annotation components by node
  * @param $entity
  */
-function getAnnotationComponentsByNode($entity) {
+function getAnnotationComponentsByNode($entity)
+{
   // get annotation collection based on entity object
   $annotation_collection = array_values(getAnnotationCollection($entity));
 
   // loop through each collection to pull out annotations list
-  foreach ($annotation_collection as $collection){
+  foreach ($annotation_collection as $collection) {
     $anno_refs = $collection->get("field_annotation_reference")->getValue();
     //print_log($anno_refs);
     $annotations = getAnnotation($anno_refs);
@@ -164,13 +184,13 @@ function getAnnotationComponentsByNode($entity) {
  * Query Annotation Collection base on url / alias
  * @param \Drupal\Core\Entity\EntityInterface $entity
  */
-function getAnnotationCollection(\Drupal\Core\Entity\EntityInterface $entity) {
-  $alias = \Drupal::service('path_alias.manager')->getAliasByPath('/node/'.$entity->id());
-  if (!str_starts_with($alias, "/node/") ) {
+function getAnnotationCollection(\Drupal\Core\Entity\EntityInterface $entity)
+{
+  $alias = \Drupal::service('path_alias.manager')->getAliasByPath('/node/' . $entity->id());
+  if (!str_starts_with($alias, "/node/")) {
     $url = $alias;
-  }
-  else {
-    $url = '/node/'.$entity->id();
+  } else {
+    $url = '/node/' . $entity->id();
   }
   return \Drupal::entityTypeManager()
     ->getListBuilder('node')
@@ -190,7 +210,8 @@ function getAnnotationCollection(\Drupal\Core\Entity\EntityInterface $entity) {
  * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
  * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
  */
-function getAnnotation (array $anno_refs) {
+function getAnnotation(array $anno_refs)
+{
   $annotations = [];
   foreach ($anno_refs as $ref) {
     $anno = \Drupal::entityTypeManager()->getStorage('node')->load($ref['target_id']);
@@ -207,7 +228,8 @@ function getAnnotation (array $anno_refs) {
  * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
  * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
  */
-function deleteAnnotation(array $anno_refs) {
+function deleteAnnotation(array $anno_refs)
+{
   foreach ($anno_refs as $ref) {
     $anno = \Drupal::entityTypeManager()->getStorage('node')->load($ref['target_id']);
     $anno->delete();
@@ -222,7 +244,8 @@ function deleteAnnotation(array $anno_refs) {
  * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
  * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
  */
-function getAnnotationTextualBody(array $txtbody_refs)  {
+function getAnnotationTextualBody(array $txtbody_refs)
+{
   $anno_txtbody_refs = [];
   foreach ($txtbody_refs as $ref) {
     $anno = \Drupal::entityTypeManager()->getStorage('node')->load($ref['target_id']);
@@ -239,7 +262,8 @@ function getAnnotationTextualBody(array $txtbody_refs)  {
  * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
  * @throws \Drupal\Core\Entity\EntityStorageException
  */
-function deleteAnnotationTextualBody(array $txtbody_refs)  {
+function deleteAnnotationTextualBody(array $txtbody_refs)
+{
   foreach ($txtbody_refs as $ref) {
     $textualbody = \Drupal::entityTypeManager()->getStorage('node')->load($ref['target_id']);
     $textualbody->delete();
@@ -275,8 +299,7 @@ function recogito_integration_entity_operation_alter(array &$operations, $entity
         $node = getNodeIdByAlias($anno_collection_url);
         if (isset($node)) {
           $nodeId = $node->id();
-        }
-        else {
+        } else {
           return;
         }
       }
@@ -317,7 +340,7 @@ function recogito_integration_menu_local_tasks_alter(&$data, $route_name, \Drupa
 
   $custom_mode = \Drupal::config('recogito_integration.settings')->get('recogito_integration.custom_dom') === 1 && !empty(\Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name'));
   if (\Drupal::currentUser()->isAuthenticated() && isset($node) && is_object($node) && get_class($node) === 'Drupal\node\Entity\Node'
-    && (in_array($node->bundle(), array_filter(array_values($anno_contenttypes))) || $custom_mode=== true)) {
+    && (in_array($node->bundle(), array_filter(array_values($anno_contenttypes))) || $custom_mode === true)) {
 
     if (isset($node)) {
       // Add a tab linking to node/add to all pages.
@@ -325,7 +348,7 @@ function recogito_integration_menu_local_tasks_alter(&$data, $route_name, \Drupa
         '#theme' => 'menu_local_task',
         '#link' => [
           'title' => t('Add/Edit Annotation'),
-          'url' => Url::fromRoute("entity.node.canonical", ['node' => $node->id()], ['query' => ['mode'=> 'annotation']]),
+          'url' => Url::fromRoute("entity.node.canonical", ['node' => $node->id()], ['query' => ['mode' => 'annotation']]),
           'localized_options' => [
             'attributes' => [
               'title' => t('Annotation Enabled'),
