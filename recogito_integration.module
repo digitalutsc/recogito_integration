@@ -126,9 +126,11 @@ function _deleteAnnotations(\Drupal\Core\Entity\EntityInterface $entity) {
         if (isset($anno)) {
           $txtbd_reff = $anno->get("field_annotation_textualbodies")->getValue();
           deleteAnnotationTextualBody($txtbd_reff);
+
+          // then delete annotation node
+          $anno->delete();
         }
-        // then delete annotation node
-        $anno->delete();
+
       }
       // finally, delete annotation colection
       $collection->delete();
