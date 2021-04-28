@@ -98,7 +98,7 @@ function recogito_integration_entity_predelete(\Drupal\Core\Entity\EntityInterfa
  * @throws \Drupal\Core\Entity\EntityStorageException
  */
 function recogito_integration_entity_view(array &$build, \Drupal\Core\Entity\EntityInterface $entity, \Drupal\Core\Entity\Display\EntityViewDisplayInterface $display, $view_mode) {
-  _deleteAnnotations($entity);
+
 }
 
 /**
