@@ -104,19 +104,36 @@ function recogito_integration_entity_view(array &$build, \Drupal\Core\Entity\Ent
 
 function recogito_integration_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id)
 {
-  // change the confirming message for delete a node with annotation associated with it.
-  $nid = explode(":", $form['#cache']['tags'][0])[1];
 
+  //logging($form_state->getformObject()->getEntity()->id());
+  
+  // change the confirming message for delete a node with annotation associated with it.
+  if (isset($form['#cache'])) { 
+	  $nid = explode(":", $form['#cache']['tags'][0])[1];
+  }
+  //else if ($form_state->getformObject() !== null && $form_state->getformObject()->getEntity() !== null && $form_state->getformObject()->getEntity()->id() !== null ) {
+  else if (str_starts_with($form_id, "node_")  && endsWith($form_id, "_delete_form") ) {
+	$nid = $form_state->getformObject()->getEntity()->id();
+  }
   if (isset($nid)) {
+    //logging($nid);
     $node = \Drupal::entityTypeManager()->getStorage('node')->load($nid);
 
     // get annotation collection based on entity object
-    $annotation_collection = array_values(getAnnotationCollection($node));
-
+    $annotation_collection = [];
+    if (isset($node)) {
+    	$annotation_collection = array_values(getAnnotationCollection($node));
+    }
+   
     if (count($annotation_collection) > 0) {
       $form['description']['#markup'] = '<strong><u>Warning</u>:</strong> This page (or node) currently contains annotations. Deleting this node will also deleting the annotation which are associated with it. <strong>This action cannot be undone</strong>.';
     }
   }
+
+}
+
+function endsWith( $haystack, $needle ) {
+    return $needle === "" || (substr($haystack, -strlen($needle)) === $needle);
 }
 
 /**
