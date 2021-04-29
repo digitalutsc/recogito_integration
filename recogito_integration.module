@@ -102,38 +102,59 @@ function recogito_integration_entity_view(array &$build, \Drupal\Core\Entity\Ent
 
 }
 
+/**
+ * Implement hook_entity_form_alter
+ * @param $form
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ * @param $form_id
+ * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+ * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+ */
 function recogito_integration_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id)
 {
 
-  //logging($form_state->getformObject()->getEntity()->id());
-  
-  // change the confirming message for delete a node with annotation associated with it.
-  if (isset($form['#cache'])) { 
-	  $nid = explode(":", $form['#cache']['tags'][0])[1];
-  }
-  //else if ($form_state->getformObject() !== null && $form_state->getformObject()->getEntity() !== null && $form_state->getformObject()->getEntity()->id() !== null ) {
-  else if (str_starts_with($form_id, "node_")  && endsWith($form_id, "_delete_form") ) {
-	$nid = $form_state->getformObject()->getEntity()->id();
-  }
-  if (isset($nid)) {
-    //logging($nid);
-    $node = \Drupal::entityTypeManager()->getStorage('node')->load($nid);
+  if (in_array(get_class($form_state->getformObject()), ['Drupal\node\NodeForm', 'Drupal\node\Form\NodeDeleteForm'])) {
+    $nid = $form_state->getformObject()->getEntity()->id();
 
-    // get annotation collection based on entity object
-    $annotation_collection = [];
-    if (isset($node)) {
-    	$annotation_collection = array_values(getAnnotationCollection($node));
-    }
-   
-    if (count($annotation_collection) > 0) {
-      $form['description']['#markup'] = '<strong><u>Warning</u>:</strong> This page (or node) currently contains annotations. Deleting this node will also deleting the annotation which are associated with it. <strong>This action cannot be undone</strong>.';
+    // change the confirming message for delete a node with annotation associated with it.
+    if (isset($nid) && !empty($nid)) {
+      // get node by node id
+      $node = \Drupal::entityTypeManager()->getStorage('node')->load($nid);
+
+      // get annotation collection based on entity object
+      $annotation_collection = [];
+      if (isset($node)) {
+        $annotation_collection = array_values(getAnnotationCollection($node));
+      }
+      if (count($annotation_collection) > 0) {
+        if (str_starts_with($form_id, "node_") && endsWith($form_id, "_delete_form")) {
+
+          $form['description']['#markup'] = '<strong><u>Warning</u>:</strong> This page (or node) currently contains annotations. Deleting this node will also deleting the annotation which are associated with it. <strong>This action cannot be undone</strong>.';
+        } else if (str_starts_with($form_id, "node_") && endsWith($form_id, "_edit_form")) {// node_page_edit_form
+          $msg = 'WARNING:\n\nThis page (or node) currently contains annotations. Updating this node effect the existing annotation which are associated with it.\n\nPlease double check on the existing annotation of this page after updating it.';
+          $form['actions']['submit'] = array(
+            '#type' => 'submit',
+            '#value' => t('Save'),
+            '#attributes' => array('onclick' => 'if(!confirm("'.$msg.'")){return false;}'),
+            "#submit" => [
+              "::submitForm",
+              "::save",
+              "menu_ui_form_node_form_submit"
+            ],
+            "#access" => true,
+            "#button_type" => "primary",
+            "#weight" => 5
+          );
+        }
+      }
     }
   }
 
 }
 
-function endsWith( $haystack, $needle ) {
-    return $needle === "" || (substr($haystack, -strlen($needle)) === $needle);
+function endsWith($haystack, $needle)
+{
+  return $needle === "" || (substr($haystack, -strlen($needle)) === $needle);
 }
 
 /**
