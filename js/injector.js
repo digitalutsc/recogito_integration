@@ -93,6 +93,14 @@ function initTextAnnotation(perms) {
 
       getAnnotations(text_anno);
 
+
+      jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
+        if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
+          setTimeout(setDefaultTerm, 10);
+          return;
+        }
+      });
+
       text_anno.on('selectAnnotation', function (annotation) {
         // TODO: check if there is preset configuration ready before intial Recogito JS annotation
         if (drupalSettings.recogito_integration.initial_setup)
@@ -102,6 +110,17 @@ function initTextAnnotation(perms) {
       });
 
       text_anno.on('createAnnotation', function (annotation) {
+        // set "footnote" as default vocabulary
+        var tmp = annotation.body[0];
+        annotation.body.push({
+          created: tmp.created,
+          creator: tmp.creator,
+          modified: tmp.modified,
+          purpose: "tagging",
+          type: tmp.type,
+          value: "footnote",
+        });
+        console.log(annotation);
         // TODO: check if there is preset configuration ready before intial Recogito JS annotation
         if (drupalSettings.recogito_integration.initial_setup === false)
           alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
@@ -140,6 +159,17 @@ function initTextAnnotation(perms) {
     }
   }
 
+}
+
+function setDefaultTerm(term = 'footnote') {
+  var div = jQuery(".r6o-tag").find('div')[0];
+  jQuery(div).html(
+    '<ul class="r6o-taglist">' +
+    '<li>' +
+      '<span class="r6o-label">'+term+'</span>' +
+    '</li>' +
+    '</ul>'
+  );
 }
 
 /**
@@ -332,6 +362,7 @@ function highlightAnnotatedContent(a) {
 function create_annotation(a) {
   var page_url = window.location.pathname;
   var annotation_obj = convert_annotation_object(a);
+  console.log(annotation_obj);
   jQuery.ajax({
     type: "POST",
     url: "/recogito_integration/create",
