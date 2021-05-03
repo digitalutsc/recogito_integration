@@ -110,15 +110,106 @@ class RecogitoIntegrationForm extends ConfigFormBase
     foreach ($vocabularies as $vocal) {
       $options_taxonomy[$vocal->id()] = $vocal->label();
     }
-    $form['annotation_vocab_name'] = array(
+    /*$form['annotation_vocab_name'] = array(
       '#type' => 'radios',
       '#title' => $this->t('Annotation Vocabulary Name:'),
       '#options' => $options_taxonomy,
       '#default_value' => $config->get('recogito_integration.annotation_vocab_name'),
       '#required' => true,
-    );
+    );*/
+
+
+
+    if (empty($form_state->getValue('annotation_vocab_name')) && empty($config->get('recogito_integration.annotation_vocab_name'))) {
+      // Use a default value.
+      $selected_vocalbulary = -1;
+    }
+    else {
+      // Get the value if it already exists.
+      if (!empty($form_state->getValue('annotation_vocab_name'))) {
+        $selected_vocalbulary = $form_state->getValue('annotation_vocab_name');
+      }
+      else if (!empty($config->get('recogito_integration.annotation_vocab_name'))) {
+        $selected_vocalbulary = $config->get('recogito_integration.annotation_vocab_name');
+      }
+    }
+
+    $form['annotation_vocab_name'] = [
+      '#type' => 'radios',
+      '#title' => $this->t('Annotation Vocabulary Name:'),
+      '#options' => $options_taxonomy,
+      //'#default_value' => $selected_vocalbulary,
+      '#default_value' => $config->get('recogito_integration.annotation_vocab_name'),
+      '#ajax' => [
+        'callback' => '::selectVocabularyCallback',
+        'wrapper' => 'instrument-fieldset-container',
+      ],
+    ];
+
+    $form['default_term_container'] = [
+      '#type' => 'container',
+      '#attributes' => ['id' => 'instrument-fieldset-container'],
+    ];
+    // Build the instrument field set.
+    $form['default_term_container']['default_term'] = [
+      '#type' => 'container',
+    ];
+
+    if ($selected_vocalbulary != -1) {
+      print_log($form_state->getValue('default_term'));
+      $form['default_term_container']['default_term']['default_term'] = [
+        '#type' => 'select',
+        '#title' => $this->t('Select a default tag:'),
+        '#options' => $this->getTermDropdownBySelectedVocal($selected_vocalbulary),
+        '#default_value' => !empty($config->get('recogito_integration.default_term')) ? $config->get('recogito_integration.default_term') : -1,
+        '#description' => $this->t('Select the default tag when create a new annotation')
+      ];
+    }
 
     return $form;
+  }
+
+
+  /**
+   * Provide a new dropdown based on the AJAX call.
+   *
+   * This callback will occur *after* the form has been rebuilt by buildForm().
+   * Since that's the case, the form should contain the right values for
+   * default_term.
+   *
+   * @param array $form
+   *   An associative array containing the structure of the form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The current state of the form.
+   *
+   * @return array
+   *   The portion of the render structure that will replace the
+   *   instrument-dropdown-replace form element.
+   */
+  public function selectVocabularyCallback(array $form, FormStateInterface $form_state) {
+    return $form['default_term_container'];
+  }
+
+
+
+  /**
+   * Helper function to populate the second dropdown.
+   *
+   * This would normally be pulling data from the database.
+   *
+   * @param string $key
+   *   This will determine which set of options is returned.
+   *
+   * @return array
+   *   Dropdown options
+   */
+  public function getTermDropdownBySelectedVocal($key = '') {
+    $terms =\Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($key);
+    $options = [-1 => '--- Select ---'];
+    foreach ($terms as $term) {
+      $options[$term->name] = $term->name;
+    }
+    return $options;
   }
 
   /**
@@ -145,6 +236,7 @@ class RecogitoIntegrationForm extends ConfigFormBase
     }
     $config->set('recogito_integration.content-type-to-annotated', $form_state->getValues()['select-content-types']);
     $config->set('recogito_integration.annotation_vocab_name', $form_state->getValue('annotation_vocab_name'));
+    $config->set('recogito_integration.default_term', $form_state->getValue('default_term'));
     $config->save();
     return parent::submitForm($form, $form_state);
   }

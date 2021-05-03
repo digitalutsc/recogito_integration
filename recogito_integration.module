@@ -48,6 +48,7 @@ function recogito_integration_page_attachments(array &$attachments)
         'displayName' => \Drupal::currentUser()->getDisplayName()
       ];
       $attachments['#attached']['drupalSettings']['recogito_integration']['user_data'] = $user_data;
+      $attachments['#attached']['drupalSettings']['recogito_integration']['default_term'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.default_term');;
       $attachments['#attached']['drupalSettings']['recogito_integration']['initial_setup'] =
         (\Drupal::config('recogito_integration.settings') !== null
           && !empty(\Drupal::config('recogito_integration.settings')->get('recogito_integration.initialsetup')))

@@ -23,6 +23,7 @@ function initTextAnnotation(perms) {
   var customAttributeName = drupalSettings.recogito_integration.attach_attribute_name;
   var range = drupalSettings.recogito_integration.annotation_range;
   var strings = drupalSettings.recogito_integration.taxonomy_terms;
+  var default_term = drupalSettings.recogito_integration.default_term;
   var readOnly = (!perms['recogito create annotations'] &&
     !perms['recogito edit annotations'] &&
     !perms['recogito delete annotations'] &&
@@ -93,13 +94,15 @@ function initTextAnnotation(perms) {
 
       getAnnotations(text_anno);
 
+      if (default_term != -1) { // ignore when no default tag is selected
+        jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
+          if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
+            setTimeout(setDefaultTerm, 10);
+            return;
+          }
+        });
 
-      jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
-        if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
-          setTimeout(setDefaultTerm, 10);
-          return;
-        }
-      });
+      }
 
       text_anno.on('selectAnnotation', function (annotation) {
         // TODO: check if there is preset configuration ready before intial Recogito JS annotation
@@ -108,19 +111,19 @@ function initTextAnnotation(perms) {
         else
           alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
       });
-
       text_anno.on('createAnnotation', function (annotation) {
-        // set "footnote" as default vocabulary
-        var tmp = annotation.body[0];
-        annotation.body.push({
-          created: tmp.created,
-          creator: tmp.creator,
-          modified: tmp.modified,
-          purpose: "tagging",
-          type: tmp.type,
-          value: "footnote",
-        });
-        console.log(annotation);
+        if (default_term != -1) { // ignore when no default tag is selected
+          // set "footnote" as default vocabulary
+          var tmp = annotation.body[0];
+          annotation.body.push({
+            created: tmp.created,
+            creator: tmp.creator,
+            modified: tmp.modified,
+            purpose: "tagging",
+            type: tmp.type,
+            value: default_term,
+          });
+        }
         // TODO: check if there is preset configuration ready before intial Recogito JS annotation
         if (drupalSettings.recogito_integration.initial_setup === false)
           alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
@@ -161,7 +164,8 @@ function initTextAnnotation(perms) {
 
 }
 
-function setDefaultTerm(term = 'footnote') {
+function setDefaultTerm() {
+  var term = drupalSettings.recogito_integration.default_term;
   var div = jQuery(".r6o-tag").find('div')[0];
   jQuery(div).html(
     '<ul class="r6o-taglist">' +
