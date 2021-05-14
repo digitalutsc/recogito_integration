@@ -8,6 +8,7 @@ jQuery(document).ready(function () {
       initOpenSeadragonAnnnotation(perms);
 
     } else {
+
       //setTimeout(awaitOpenSeadragonAnnotorious, 300);
       initTextAnnotation(perms);
     }
@@ -93,15 +94,14 @@ function initTextAnnotation(perms) {
       text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
 
       getAnnotations(text_anno);
-
       if (default_term != -1) { // ignore when no default tag is selected
         jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
           if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
             setTimeout(setDefaultTerm, 10);
+            //setTimeout(addAccessibilityLabel, 10);
             return;
           }
         });
-
       }
 
       text_anno.on('selectAnnotation', function (annotation) {
@@ -170,10 +170,32 @@ function setDefaultTerm() {
   jQuery(div).html(
     '<ul class="r6o-taglist">' +
     '<li>' +
-      '<span class="r6o-label">'+term+'</span>' +
+      '<span class="r6o-label"'+term+ '</span>' +
     '</li>' +
     '</ul>'
   );
+}
+function addAccessibilityLabel()
+{
+
+  //jQuery(".r6o-editable-text").attr("aria-label", "test label");
+  var elems = jQuery(".r6o-editable-text");
+  for (var i = 0; i < elems.length-1; i++)
+  {
+    //add aria-label to comments
+    elems[i].setAttribute("aria-label", "Comment " + (i+1));
+  }
+  //add aria-label to reply field
+  elems[elems.length - 1].setAttribute("aria-label", "Add a reply");
+  //make "aria-labelledby" match the id and add a title
+  var loc = jQuery(".r6o-autocomplete").find("input")[0];
+  var id = jQuery(loc).attr("id");
+  jQuery(loc).attr("aria-labelledby", id);
+  jQuery(loc).attr("title", "Add a tag");
+
+  loc = jQuery(".r6o-autocomplete").find("ul")[0];
+  id = jQuery(loc).attr("id");
+  jQuery(loc).attr("aria-labelledby", id);
 }
 
 /**
@@ -182,6 +204,7 @@ function setDefaultTerm() {
  * @param recogito
  */
 function getAnnotations(recogito, readonly = false) {
+
   jQuery.ajax({
     type: "GET",
     url: "/recogito_integration/get",
@@ -281,7 +304,7 @@ function highlightAnnotatedContent(a) {
   //Show and hide specific features depending on permissions
   (function loopSearch() {
     if (jQuery('.r6o-widget').length == comment_count + 2) { //Work once all comments have been loaded
-
+      addAccessibilityLabel();
       // Kyle added to have Admin user 's view (eg. /node/1) page has readonly mode only
       var readOnly = false;
       console.log(drupalSettings.recogito_integration.admin_view_mode);
@@ -383,6 +406,7 @@ function create_annotation(a) {
       alert(xhr.responseText);
     }
   });
+
 }
 
 /**
