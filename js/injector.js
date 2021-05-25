@@ -170,7 +170,7 @@ function setDefaultTerm() {
   jQuery(div).html(
     '<ul class="r6o-taglist">' +
     '<li>' +
-      '<span class="r6o-label"'+term+ '</span>' +
+      '<span class="r6o-label">'+term+ '</span>' +
     '</li>' +
     '</ul>'
   );
