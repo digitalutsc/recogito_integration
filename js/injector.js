@@ -403,7 +403,7 @@ function create_annotation(a) {
       console.log(data);
     },
     error: function (xhr, status, error) {
-      alert(xhr.responseText);
+      alert("Sorry, unable to create the annotation because of error: \n\n" + error);
     }
   });
 
@@ -429,7 +429,7 @@ function update_annotation(annotation, previous) {
       console.log(data);
     },
     error: function (xhr, status, error) {
-      alert(xhr.responseText);
+      alert("Sorry, unable to update the annotation because of error: \n\n" + error);
     }
   });
 }
@@ -453,7 +453,8 @@ function delete_annotation(annotation) {
       console.log(data);
     },
     error: function (xhr, status, error) {
-      alert(xhr.responseText);
+      //xhr.responseText
+      alert("Sorry, unable to delete the annotation because of error: \n\n" + error);
     }
   });
 }
