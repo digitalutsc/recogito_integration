@@ -483,7 +483,7 @@ function convert_annotation_object(a) {
   if (Array.isArray(a.target.selector)) { //Textual Annotations
     for (selector in a.target.selector) {
       if (a.target.selector[selector].type == 'TextQuoteSelector') {
-        annotation_object.target_exact = a.target.selector[selector].exact;
+        annotation_object.target_exact = encodeURIComponent(a.target.selector[selector].exact);
       } else if (a.target.selector[selector].type == 'TextPositionSelector') {
         annotation_object.target_start = a.target.selector[selector].start;
         annotation_object.target_end = a.target.selector[selector].end;
