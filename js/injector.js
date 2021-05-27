@@ -113,6 +113,12 @@ function initTextAnnotation(perms) {
       });
       text_anno.on('createAnnotation', function (annotation) {
         if (default_term != -1) { // ignore when no default tag is selected
+          // add a fix for 500 error when add diacritics (.ie: Öçè) to a comment or reply
+          //annotation.body[0].value = encodeURIComponent(annotation.body[0].value);
+          for (var i = 0; i < annotation.body.length; i++) {
+            annotation.body[i].value = encodeURIComponent(annotation.body[i].value);
+          }
+
           // set "footnote" as default vocabulary
           var tmp = annotation.body[0];
           annotation.body.push({
@@ -288,6 +294,14 @@ function initOpenSeadragonAnnnotation(perms) {
  * @param a: annotation object
  */
 function highlightAnnotatedContent(a) {
+  console.log(highlightAnnotatedContent);
+  console.log(a);
+
+  // add decode when there is a diacritics in the comment or reply
+  for (var i = 0; i < a.body.length; i++) {
+    a.body[i].value = decodeURIComponent(a.body[i].value);
+  }
+
   var comment_count = 0;
   var tag_list = [];
   var perms = drupalSettings.recogito_integration.permissions;
@@ -416,6 +430,11 @@ function create_annotation(a) {
  * @param previous
  */
 function update_annotation(annotation, previous) {
+  // add a fix for 500 error when update annotation with diacritics (.ie: Öçè) in any text field.
+  for (var i = 0; i < annotation.body.length; i++) {
+    annotation.body[i].value = encodeURIComponent(annotation.body[i].value);
+  }
+
   var annotation_obj = convert_annotation_object(annotation);
   jQuery.ajax({
     type: "POST",
@@ -483,6 +502,7 @@ function convert_annotation_object(a) {
   if (Array.isArray(a.target.selector)) { //Textual Annotations
     for (selector in a.target.selector) {
       if (a.target.selector[selector].type == 'TextQuoteSelector') {
+        // add a fix for 500 error when select diacritics (.ie: Öçè) in a node
         annotation_object.target_exact = encodeURIComponent(a.target.selector[selector].exact);
       } else if (a.target.selector[selector].type == 'TextPositionSelector') {
         annotation_object.target_start = a.target.selector[selector].start;
