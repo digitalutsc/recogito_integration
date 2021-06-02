@@ -14,3 +14,8 @@ recogito_injection:
     - core/drupal
     - core/drupalSettings
     - core/drupal.ajax
+
+simplyCountable:
+  version: 1.x
+  js:
+    js/jquery.simplyCountable.js: {}

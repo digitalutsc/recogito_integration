@@ -71,6 +71,7 @@ function recogito_integration_page_attachments(array &$attachments)
 
       //$attachments['#attached']['library'][] = 'openseadragon/init';
       $attachments['#attached']['library'][] = 'recogito_integration/recogito_injection';
+      $attachments['#attached']['library'][] = 'recogito_integration/simplyCountable';
     }
   }
 }
