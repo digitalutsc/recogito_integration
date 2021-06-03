@@ -190,7 +190,9 @@ class AnnotationStorage extends ControllerBase {
         'moderation_state' => 'published',
 
         # annotation fields
-        'title' => $textualbody->value,
+        // Kyle changed for annotation text has length > 255 when store it in this title field
+        //'title' => $textualbody->value,
+        'title' => (strlen($textualbody->value) > 255) ? substr($textualbody->value, 0, 255) : $textualbody->value,
         'field_annotation_created' => $textualbody->created,
         'field_annotation_creator_id' => $textualbody->creator_id,
         'field_annotation_creator_name' => $textualbody->creator_name,

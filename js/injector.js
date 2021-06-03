@@ -98,7 +98,7 @@ function initTextAnnotation(perms) {
         jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
           if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
             setTimeout(setDefaultTerm, 10);
-            setTimeout(addCountWords, 25);
+            //setTimeout(addCountWords, 25);
             return;
           }
         });
@@ -170,6 +170,9 @@ function initTextAnnotation(perms) {
 
 }
 
+/**
+ * Kyle added to set Default Term "Footnote"
+ */
 function setDefaultTerm() {
   var term = drupalSettings.recogito_integration.default_term;
   var div = jQuery(".r6o-tag").find('div')[0];
@@ -182,6 +185,10 @@ function setDefaultTerm() {
   );
 }
 
+/**
+ * Kyle added an UI for textfield character/word counter in case we like to limit the length of comment textfield
+ * Currently unused
+ */
 function addCountWords() {
   // add countable feature for
   jQuery('.r6o-editable-text').each(function(index, activeCommentTextfield) {
@@ -211,17 +218,29 @@ function addCountWords() {
 
 }
 
-// Original
+/**
+ * Kyle added to encode annotation text with diacritics
+ * @param s
+ * @returns {*}
+ */
 function encode_utf8( s )
 {
   return unescape( encodeURIComponent ( s ) );
 }
 
+/**
+ * Kyle added to decode annotation text with diacritics
+ * @param s
+ * @returns {string}
+ */
 function decode_utf8( s )
 {
   return decodeURIComponent ( escape( s ) );
 }
 
+/**
+ * John added to pass accessiblity test for annotations 
+ */
 function addAccessibilityLabel()
 {
 
@@ -358,7 +377,7 @@ function highlightAnnotatedContent(a) {
   (function loopSearch() {
     if (jQuery('.r6o-widget').length == comment_count + 2) { //Work once all comments have been loaded
       addAccessibilityLabel();
-      setTimeout(addCountWords, 25);
+      //setTimeout(addCountWords, 25);
       // Kyle added to have Admin user 's view (eg. /node/1) page has readonly mode only
       var readOnly = false;
       if (drupalSettings.recogito_integration.admin_view_mode === true && window.location.search !== "?mode=annotation") {
