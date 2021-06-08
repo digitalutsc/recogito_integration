@@ -3,12 +3,14 @@ recogito_injection:
     state:
       css/recogito.min.css: { weight: -4 }
       css/annotorious.min.css: { weight: -5 }
+      css/overwrite_hidden.css: {weight: -6}
       #css/custom.css: {weight: -5}
       #css/custom2.min.css: { weight: -4 }
   js:
     js/recogito.min.js: { weight: -3 }
     js/openseadragon-annotorious.min.js: { weight: -2 }
     js/injector.js: { weight: -1 }
+    js/annotorious.min.js: { weight: -2}
   dependencies:
     - core/jquery
     - core/drupal
