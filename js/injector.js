@@ -202,7 +202,9 @@ function initTextAnnotation(perms) {
         jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
           if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
             setTimeout(setDefaultTerm, 10);
-            //setTimeout(addAccessibilityLabel, 10);
+            //setTimeout(addCountWords, 25);
+            setTimeout(addCountableTag, 25);
+
             return;
           }
         });
@@ -220,6 +222,13 @@ function initTextAnnotation(perms) {
       });
       text_anno.on('createAnnotation', function (annotation) {
         if (default_term != -1) { // ignore when no default tag is selected
+
+          // add a fix for 500 error when add diacritics (.ie: Öçè) to a comment or reply
+          //annotation.body[0].value = encode_utf8(annotation.body[0].value);
+          for (var i = 0; i < annotation.body.length; i++) {
+              annotation.body[i].value = encode_utf8(annotation.body[i].value);
+          }
+
           // set "footnote" as default vocabulary
           var tmp = annotation.body[0];
           annotation.body.push({
@@ -271,6 +280,9 @@ function initTextAnnotation(perms) {
 
 }
 
+/**
+ * Kyle added to set Default Term "Footnote"
+ */
 function setDefaultTerm() {
   var term = drupalSettings.recogito_integration.default_term;
   var div = jQuery(".r6o-tag").find('div')[0];
@@ -281,7 +293,93 @@ function setDefaultTerm() {
       '</li>' +
       '</ul>'
   );
+  //jQuery(".r6o-btn").html("Save");
+  //jQuery(".r6o-btn.outline").html("Cancel");
 }
+
+/**
+ * Kyle added an UI for textfield character/word counter in case we like to limit the length of comment textfield
+ * Currently unused
+ */
+function addCountWords() {
+  // add countable feature for
+  jQuery('.r6o-editable-text').each(function(index, activeCommentTextfield) {
+
+    console.log(jQuery(activeCommentTextfield).parent().attr('class'));
+    if (jQuery(activeCommentTextfield).parent().attr('class') === "r6o-widget comment editable") {
+      //if (jQuery().parent().attr('class'))
+      if (jQuery('#comment-counter').length === 0)
+        jQuery(activeCommentTextfield).after('Limit: <span id="comment-counter">0</span>/200 characters.</strong>');
+
+      jQuery(activeCommentTextfield).simplyCountable({
+        counter: '#comment-counter',
+        countType: 'characters',
+        maxCount: 200,
+        strictMax: true,
+        countDirection: 'up',
+        onOverCount: function (count, countable, counter) {
+        },
+        onSafeCount: function (count, countable, counter) {
+        },
+        onMaxCount: function (count, countable, counter) {
+        }
+      });
+    }
+
+  });
+
+}
+
+/**
+ * Kyle added an UI for textfield character/word counter in case we like to limit the length of comment textfield
+ * Currently unused
+ */
+function addCountableTag() {
+
+
+  if (jQuery('#tag-counter').length === 0) {
+    jQuery(".r6o-autocomplete").find('input').attr("placeholder", "Add a tag (press ENTER for each tag)");
+    jQuery(".r6o-autocomplete").find('input').after('<span class="tag-limit">Tag\'s limit: <span id="tag-counter">0</span>/150 characters.</strong></span>');
+  }
+  jQuery(".r6o-autocomplete").find('input').simplyCountable({
+    counter: '#tag-counteasdfasr',
+    countType: 'characters',
+    maxCount: 150,
+    strictMax: true,
+    countDirection: 'up',
+    onOverCount: function (count, countable, counter) {
+    },
+    onSafeCount: function (count, countable, counter) {
+    },
+    onMaxCount: function (count, countable, counter) {
+    }
+  });
+
+}
+
+/**
+ * Kyle added to encode annotation text with diacritics
+ * @param s
+ * @returns {*}
+ */
+function encode_utf8( s )
+{
+  return unescape( encodeURIComponent ( s ) );
+}
+
+/**
+ * Kyle added to decode annotation text with diacritics
+ * @param s
+ * @returns {string}
+ */
+function decode_utf8( s )
+{
+  return decodeURIComponent ( escape( s ) );
+}
+
+/**
+ * John added to pass accessiblity test for annotations
+ */
 function addAccessibilityLabel()
 {
 
@@ -422,6 +520,12 @@ function initOpenSeadragonAnnnotation(viewer, perms) {
  * @param a: annotation object
  */
 function highlightAnnotatedContent(a) {
+
+  // add decode when there is a diacritics in the comment or reply
+  for (var i = 0; i < a.body.length; i++) {
+    a.body[i].value = decodeURIComponent(a.body[i].value);
+  }
+
   var comment_count = 0;
   var tag_list = [];
   var perms = drupalSettings.recogito_integration.permissions;
@@ -439,10 +543,12 @@ function highlightAnnotatedContent(a) {
   //Show and hide specific features depending on permissions
   (function loopSearch() {
     if (jQuery('.r6o-widget').length == comment_count + 2) { //Work once all comments have been loaded
+      addAccessibilityLabel();
+      //setTimeout(addCountWords, 25);
+      setTimeout(addCountableTag, 25);
 
       // Kyle added to have Admin user 's view (eg. /node/1) page has readonly mode only
       var readOnly = false;
-      console.log(drupalSettings.recogito_integration.admin_view_mode);
       if (drupalSettings.recogito_integration.admin_view_mode === true && window.location.search !== "?mode=annotation") {
         readOnly = true;
       }
@@ -531,6 +637,7 @@ function create_annotation(a) {
   var page_url = window.location.pathname;
 
   var annotation_obj = convert_annotation_object(a);
+
   jQuery.ajax({
     type: "POST",
     url: "/recogito_integration/create",
@@ -542,6 +649,7 @@ function create_annotation(a) {
 
     success: function (data) {
       console.log(data);
+      location.reload();
     },
     error: function (xhr, status, error) {
       alert("Sorry, unable to create the annotation because of error: \n\n" + error);
@@ -558,6 +666,11 @@ function create_annotation(a) {
  * @param previous
  */
 function update_annotation(annotation, previous) {
+  // add a fix for 500 error when update annotation with diacritics (.ie: Öçè) in any text field.
+  for (var i = 0; i < annotation.body.length; i++) {
+      annotation.body[i].value = encode_utf8(annotation.body[i].value);
+  }
+
   var annotation_obj = convert_annotation_object(annotation);
   jQuery.ajax({
     type: "POST",
@@ -569,6 +682,7 @@ function update_annotation(annotation, previous) {
 
     success: function (data) {
       console.log(data);
+      location.reload();
     },
     error: function (xhr, status, error) {
       alert("Sorry, unable to update the annotation because of error: \n\n" + error);
@@ -593,6 +707,7 @@ function delete_annotation(annotation) {
 
     success: function (data) {
       console.log(data);
+      location.reload();
     },
     error: function (xhr, status, error) {
       //xhr.responseText
@@ -626,7 +741,10 @@ function convert_annotation_object(a) {
   if (Array.isArray(a.target.selector)) { //Textual Annotations
     for (selector in a.target.selector) {
       if (a.target.selector[selector].type == 'TextQuoteSelector') {
-        annotation_object.target_exact = a.target.selector[selector].exact;
+
+          // add a fix for 500 error when select diacritics (.ie: Öçè) in a node
+          annotation_object.target_exact = encode_utf8(a.target.selector[selector].exact);
+
       } else if (a.target.selector[selector].type == 'TextPositionSelector') {
         annotation_object.target_start = a.target.selector[selector].start;
         annotation_object.target_end = a.target.selector[selector].end;
@@ -664,7 +782,8 @@ function convert_annotation_w3c(annotation_object) {
     annotation_w3c.type = "Selection";
   } else {
     annotation_w3c.type = "Annotation";
-    annotation_w3c.target.selector.push({type: "TextQuoteSelector", exact: annotation_object.target_exact[0].value});
+    if (annotation_object.target_exact.length > 0 )
+      annotation_w3c.target.selector.push({type: "TextQuoteSelector", exact: annotation_object.target_exact[0].value});
     annotation_w3c.target.selector.push({
       type: "TextPositionSelector",
       start: annotation_object.target_start[0].value,

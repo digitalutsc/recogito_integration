@@ -146,7 +146,8 @@ class AnnotationStorage extends ControllerBase {
   * @return JsonResponse Annotation status after running function
   */
   public function deleteAnnotation() {
-    $annotation = json_decode(\Drupal::request()->server->get('HTTP_ANNOTATIONOBJ'));
+    // add utf8_decode call for annotation json with diacritics to assist json_decode (was return null)
+    $annotation = json_decode(utf8_decode(\Drupal::request()->server->get('HTTP_ANNOTATIONOBJ')));
     $annotation_node = self::queryAnnotationNode($annotation->id);
     if (!isset($annotation_node)) {
       return JsonResponse::fromJsonString(json_encode("Nonexistent annotation ID"));
@@ -189,7 +190,9 @@ class AnnotationStorage extends ControllerBase {
         'moderation_state' => 'published',
 
         # annotation fields
-        'title' => $textualbody->value,
+        // Kyle changed for annotation text has length > 255 when store it in this title field
+        //'title' => $textualbody->value,
+        'title' => (strlen($textualbody->value) > 255) ? substr($textualbody->value, 0, 255) : $textualbody->value,
         'field_annotation_created' => $textualbody->created,
         'field_annotation_creator_id' => $textualbody->creator_id,
         'field_annotation_creator_name' => $textualbody->creator_name,

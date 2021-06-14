@@ -6,6 +6,7 @@ recogito_injection:
       css/overwrite_hidden.css: {weight: -6}
       #css/custom.css: {weight: -5}
       #css/custom2.min.css: { weight: -4 }
+      css/style.css: {weight: -5}
   js:
     js/recogito.min.js: { weight: -3 }
     js/openseadragon-annotorious.min.js: { weight: -2 }
@@ -16,3 +17,8 @@ recogito_injection:
     - core/drupal
     - core/drupalSettings
     - core/drupal.ajax
+
+simplyCountable:
+  version: 1.x
+  js:
+    js/jquery.simplyCountable.js: {}
