@@ -99,6 +99,8 @@ function initTextAnnotation(perms) {
           if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
             setTimeout(setDefaultTerm, 10);
             //setTimeout(addCountWords, 25);
+            setTimeout(addCountableTag, 25);
+
             return;
           }
         });
@@ -183,6 +185,8 @@ function setDefaultTerm() {
     '</li>' +
     '</ul>'
   );
+  //jQuery(".r6o-btn").html("Save");
+  //jQuery(".r6o-btn.outline").html("Cancel");
 }
 
 /**
@@ -219,6 +223,33 @@ function addCountWords() {
 }
 
 /**
+ * Kyle added an UI for textfield character/word counter in case we like to limit the length of comment textfield
+ * Currently unused
+ */
+function addCountableTag() {
+
+
+  if (jQuery('#tag-counter').length === 0) {
+    jQuery(".r6o-autocomplete").find('input').attr("placeholder", "Add a tag (press ENTER for each tag)");
+    jQuery(".r6o-autocomplete").find('input').after('<span class="tag-limit">Tag\'s limit: <span id="tag-counter">0</span>/150 characters.</strong></span>');
+  }
+  jQuery(".r6o-autocomplete").find('input').simplyCountable({
+    counter: '#tag-counteasdfasr',
+    countType: 'characters',
+    maxCount: 150,
+    strictMax: true,
+    countDirection: 'up',
+    onOverCount: function (count, countable, counter) {
+    },
+    onSafeCount: function (count, countable, counter) {
+    },
+    onMaxCount: function (count, countable, counter) {
+    }
+  });
+
+}
+
+/**
  * Kyle added to encode annotation text with diacritics
  * @param s
  * @returns {*}
@@ -239,7 +270,7 @@ function decode_utf8( s )
 }
 
 /**
- * John added to pass accessiblity test for annotations 
+ * John added to pass accessiblity test for annotations
  */
 function addAccessibilityLabel()
 {
@@ -378,6 +409,7 @@ function highlightAnnotatedContent(a) {
     if (jQuery('.r6o-widget').length == comment_count + 2) { //Work once all comments have been loaded
       addAccessibilityLabel();
       //setTimeout(addCountWords, 25);
+      setTimeout(addCountableTag, 25);
       // Kyle added to have Admin user 's view (eg. /node/1) page has readonly mode only
       var readOnly = false;
       if (drupalSettings.recogito_integration.admin_view_mode === true && window.location.search !== "?mode=annotation") {
@@ -473,6 +505,7 @@ function create_annotation(a) {
 
     success: function (data) {
       console.log(data);
+      location.reload();
     },
     error: function (xhr, status, error) {
       alert("Sorry, unable to create the annotation because of error: \n\n" + error);
@@ -504,6 +537,7 @@ function update_annotation(annotation, previous) {
 
     success: function (data) {
       console.log(data);
+      location.reload();
     },
     error: function (xhr, status, error) {
       alert("Sorry, unable to update the annotation because of error: \n\n" + error);
@@ -528,6 +562,7 @@ function delete_annotation(annotation) {
 
     success: function (data) {
       console.log(data);
+      location.reload();
     },
     error: function (xhr, status, error) {
       //xhr.responseText
@@ -561,8 +596,8 @@ function convert_annotation_object(a) {
     for (selector in a.target.selector) {
       if (a.target.selector[selector].type == 'TextQuoteSelector') {
         // add a fix for 500 error when select diacritics (.ie: Öçè) in a node
-
           annotation_object.target_exact = encode_utf8(a.target.selector[selector].exact);
+
       } else if (a.target.selector[selector].type == 'TextPositionSelector') {
         annotation_object.target_start = a.target.selector[selector].start;
         annotation_object.target_end = a.target.selector[selector].end;
