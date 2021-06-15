@@ -79,6 +79,13 @@ function initSimpleImageAnnotation(image, perms){
   });
 
   anno.on('createAnnotation', function (annotation) {
+
+    // add a fix for 500 error when add diacritics (.ie: Öçè) to a comment or reply
+    //annotation.body[0].value = encode_utf8(annotation.body[0].value);
+    for (var i = 0; i < annotation.body.length; i++) {
+      annotation.body[i].value = encode_utf8(annotation.body[i].value);
+    }
+    console.log(annotation.body[i]);
     create_annotation(annotation);
   });
 
@@ -90,6 +97,9 @@ function initSimpleImageAnnotation(image, perms){
   });
 
   anno.on('deleteAnnotation', function (annotation) {
+    for (var i = 0; i < annotation.body.length; i++) {
+      annotation.body[i].value = encode_utf8(annotation.body[i].value);
+    }
     delete_annotation(annotation);
   });
 }
@@ -198,6 +208,8 @@ function initTextAnnotation(perms) {
       text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
 
       getAnnotations(text_anno);
+
+      // set default term (if applicable) as default tag
       if (default_term != -1) { // ignore when no default tag is selected
         jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
           if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
@@ -297,6 +309,32 @@ function setDefaultTerm() {
   //jQuery(".r6o-btn.outline").html("Cancel");
 }
 
+
+/**
+ * Kyle added an UI for textfield character/word counter in case we like to limit the length of comment textfield
+ * Currently unused
+ */
+function modifyImageAnnotation() {
+  jQuery(".r6o-autocomplete").find('input').attr("placeholder", "Add a tag (press ENTER for each tag)");
+}
+
+/**
+ * Kyle added to set Default Term "Footnote"
+ */
+function setDefaultTermImageAnnotation() {
+  var term = drupalSettings.recogito_integration.default_term;
+  var div = jQuery(".r6o-tag").find('div')[1];
+  jQuery(div).html(
+    '<ul class="r6o-taglist">' +
+    '<li>' +
+    '<span class="r6o-label">'+term+ '</span>' +
+    '</li>' +
+    '</ul>'
+  );
+  //jQuery(".r6o-btn").html("Save");
+  //jQuery(".r6o-btn.outline").html("Cancel");
+}
+
 /**
  * Kyle added an UI for textfield character/word counter in case we like to limit the length of comment textfield
  * Currently unused
@@ -305,7 +343,6 @@ function addCountWords() {
   // add countable feature for
   jQuery('.r6o-editable-text').each(function(index, activeCommentTextfield) {
 
-    console.log(jQuery(activeCommentTextfield).parent().attr('class'));
     if (jQuery(activeCommentTextfield).parent().attr('class') === "r6o-widget comment editable") {
       //if (jQuery().parent().attr('class'))
       if (jQuery('#comment-counter').length === 0)
@@ -482,7 +519,6 @@ function initOpenSeadragonAnnnotation(viewer, perms) {
     }
   });
 
-
   image_anno.on('selectAnnotation', function (annotation) {
     if (!image_anno.readOnly) setTimeout(addAccessibilityLabel, 15);
     highlightAnnotatedContent(annotation);
@@ -498,6 +534,12 @@ function initOpenSeadragonAnnnotation(viewer, perms) {
   });
 
   image_anno.on('createAnnotation', function (annotation) {
+
+    // add a fix for 500 error when add diacritics (.ie: Öçè) to a comment or reply
+    //annotation.body[0].value = encode_utf8(annotation.body[0].value);
+    for (var i = 0; i < annotation.body.length; i++) {
+      annotation.body[i].value = encode_utf8(annotation.body[i].value);
+    }
     create_annotation(annotation);
   });
 
@@ -522,9 +564,15 @@ function initOpenSeadragonAnnnotation(viewer, perms) {
 function highlightAnnotatedContent(a) {
 
   // add decode when there is a diacritics in the comment or reply
-  for (var i = 0; i < a.body.length; i++) {
-    a.body[i].value = decodeURIComponent(a.body[i].value);
+  try {
+    for (var i = 0; i < a.body.length; i++) {
+      a.body[i].value = decodeURIComponent(a.body[i].value);
+    }
+  }catch(err) {
+    console.log(err);
+    //alert(err);
   }
+
 
   var comment_count = 0;
   var tag_list = [];
@@ -697,6 +745,7 @@ function update_annotation(annotation, previous) {
  */
 function delete_annotation(annotation) {
   var annotation_obj = convert_annotation_object(annotation);
+  console.log(annotation_obj);
   jQuery.ajax({
     type: "DELETE",
     url: "/recogito_integration/delete",

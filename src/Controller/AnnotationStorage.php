@@ -147,7 +147,8 @@ class AnnotationStorage extends ControllerBase {
   */
   public function deleteAnnotation() {
     // add utf8_decode call for annotation json with diacritics to assist json_decode (was return null)
-    $annotation = json_decode(utf8_decode(\Drupal::request()->server->get('HTTP_ANNOTATIONOBJ')));
+
+    $annotation = json_decode(\Drupal::request()->server->get('HTTP_ANNOTATIONOBJ'));
     $annotation_node = self::queryAnnotationNode($annotation->id);
     if (!isset($annotation_node)) {
       return JsonResponse::fromJsonString(json_encode("Nonexistent annotation ID"));
