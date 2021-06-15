@@ -72,7 +72,12 @@ function initSimpleImageAnnotation(image, perms, node_num){
   var anno = Annotorious.init({
     image: imgElement,
   //  readOnly: readOnly1 || window.location.search !== "?mode=annotation"
-    readOnly: readOnly1 || !window.location.search.includes('?mode=annotation')
+    readOnly: readOnly1 || !window.location.search.includes('?mode=annotation'),
+    widgets: [
+      'COMMENT',
+      {widget: 'TAG', vocabulary: strings}
+    ],
+    relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
   });
  // var anno = Annotorious.init({image: imgElement});
   anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
@@ -254,7 +259,7 @@ function initTextAnnotation(perms) {
             'COMMENT',
             {widget: 'TAG', vocabulary: strings}
           ],
-          relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs '],
+          relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
           // readOnly: readOnly || window.location.search !== "?mode=annotation" //John added this
         });
         text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
@@ -490,8 +495,8 @@ function getAnnotations(recogito, node_num, readonly = false) {
  * @param node_num : int the node to which the OSD viewer belongs
  */
 function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
-  console.log('initializing annotations at ' + node_num);
   //////////////////////////////////////////////////////////////////////////////
+  var strings = drupalSettings.recogito_integration.taxonomy_terms;
   var user_data = drupalSettings.recogito_integration.user_data;
   var readOnly1 = (!perms['recogito create annotations'] &&
       !perms['recogito edit annotations'] &&
@@ -500,7 +505,13 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
       !perms['recogito delete own annotations']);
 
   var image_anno = OpenSeadragon.Annotorious(viewer, {
-        readOnly: readOnly1 || !window.location.search.includes("?mode=annotation")
+        readOnly: readOnly1 || !window.location.search.includes("?mode=annotation"),
+        widgets: [
+          'COMMENT',
+          {widget: 'TAG', vocabulary: strings}
+        ],
+        relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
+
       });
   image_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
 
