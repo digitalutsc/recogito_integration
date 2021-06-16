@@ -828,6 +828,9 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
   });
 
   image_anno.on('deleteAnnotation', function (annotation) {
+    for (var i = 0; i < annotation.body.length; i++) {
+      annotation.body[i].value = encode_utf8(annotation.body[i].value);
+    }
     delete_annotation(annotation);
   });
 }
