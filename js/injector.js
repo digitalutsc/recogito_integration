@@ -2,41 +2,100 @@ jQuery(document).ready(function () {
   var can_read_annotations = false;
   var perms = drupalSettings.recogito_integration.permissions;
   if (perms['recogito view annotations'] && !window.location.pathname.includes('recogito_integration')) {
-    setTimeout(highlightActive, 30);
+
     if(jQuery('.openseadragon-canvas').length > 0){ //check for OpenSeadragon
       setTimeout(awaitOpenSeadragonAnnotorious, 300, perms);
     }
-   // var articles = jQuery('article');
-    var articles = jQuery("article").find('.node__content');
-    if (!articles.length){ //this should never happen
-      initTextAnnotation(perms);
-      setTimeout(function (){
-        //initialize annotations for all simple images on the page
-        var imgElements = jQuery("main").find("img");
-        var i;
-        for (i = 0; i<imgElements.length;i++){
-          initSimpleImageAnnotation(imgElements[i], perms);
-        }
-      }, 150)
-    }
-    else{
-      for(var j = 0; j < articles.length; j++){
-        var temp_num = articles[j].innerHTML.split('node/')[1].split('/')[0]; //get the node to which the current content belongs
-        //if (articles[j].getAttribute('data-history-node-id')
-          if (temp_num !== null){
-            initTextAnnotation(perms, temp_num, articles[j]);
-            var imgs = articles[j].getElementsByTagName('img');
-            for (var p = 0; p < imgs.length; p++) {
-              initSimpleImageAnnotation(imgs[p], perms, temp_num);//articles[j].getAttribute('data-history-node-id'));
-            }
-        }
-      }
+    //need to seperate this!!
+    if (drupalSettings.recogito_integration.admin_view_mode)
+      initializeAdmin(perms);
+    else
+      initializeNonAdmin(perms);
 
-    }
-  //  initTextAnnotation(perms);
   }
 });
 
+/**
+ * initialize annotations for Admin
+ * @param perms : assigned permission config
+ */
+function initializeAdmin(perms){
+  setTimeout(highlightActive, 30);
+  // var articles = jQuery('article');
+  var article_content = jQuery("article").find('.node__content');
+  if (!article_content.length){ //this should never happen
+    initTextAnnotation(perms);
+    setTimeout(function (){
+      //initialize annotations for all simple images on the page
+      var imgElements = jQuery("main").find("img");
+      var i;
+      for (i = 0; i<imgElements.length;i++){
+        initSimpleImageAnnotation(imgElements[i], perms);
+      }
+    }, 150)
+  }
+  else{
+    for(var j = 0; j < article_content.length; j++){
+      var temp_num = article_content[j].innerHTML.split('node/')[1].split('/')[0]; //get the node to which the current content belongs
+      //if (articles[j].getAttribute('data-history-node-id')
+      if (temp_num !== null){
+        initTextAnnotation(perms, temp_num, article_content[j]);
+        var imgs = article_content[j].getElementsByTagName('img');
+        for (var p = 0; p < imgs.length; p++) {
+          initSimpleImageAnnotation(imgs[p], perms, temp_num);
+        }
+      }
+    }
+
+  }
+}
+
+/**
+ * initialize annotations for non-Admin users
+ * @param perms : assigned permission config
+ */
+function initializeNonAdmin(perms){
+
+  var articles = jQuery('articles');
+  var article_content = jQuery("article").find('.node__content');
+  var temp_num;
+  if (!article_content.length){ //this should never happen
+
+    initTextAnnotation(perms);
+    setTimeout(function (){
+      //initialize annotations for all simple images on the page
+      var imgElements = jQuery("main").find("img");
+      var i;
+      for (i = 0; i<imgElements.length;i++){
+        initSimpleImageAnnotation(imgElements[i], perms);
+      }
+    }, 150);
+
+  }
+  else{
+    for (var j = 0; j < article_content.length; j++){
+      if (article_content[j].getAttribute('data-history-node-id') !== null){
+        temp_num = article_content[j].getAttribute('data-history-node-id');
+      }
+      else{
+        var q = article_content[j];
+        while (q.getAttribute('data-history-node-id') == null){
+          q = q.parentElement;
+        }
+        temp_num = q.getAttribute('data-history-node-id');
+      }
+      if (temp_num !== null){
+        initTextAnnotation(perms, temp_num, article_content[j]);
+        var imgs = article_content[j].getElementsByTagName('img');
+        for (var p = 0; p < imgs.length; p++) {
+          initSimpleImageAnnotation(imgs[p], perms, temp_num);
+        }
+      }
+    }
+
+  }
+
+}
 /**
  * Ensures the active mode is visually selected
  */
@@ -127,7 +186,6 @@ function initSimpleImageAnnotation(image, perms, node_num){
     }
 
     // check with John
-    //console.log(annotation.body[i]);
     //create_annotation(annotation);
     if (!curr_node)
       create_annotation(annotation, node_num);
@@ -168,16 +226,25 @@ function awaitOpenSeadragonAnnotorious(perms)
   jQuery('.openseadragon-container').remove();  //was hide
 
   //get the options for the old viewers
+
+  var target;
+  drupalSettings.recogito_integration.admin_view_mode
+      ? target = 'data-quickedit-field-id' : target = 'data-history-node-id';
   var temps = [];
   var node_nums = [];
   ids.forEach(function (element){
     temps.push(drupalSettings['openseadragon'][element]['options']);
     var temp = document.getElementById(element);
-    while (temp.getAttribute('data-quickedit-field-id') == null){
+    while (temp.getAttribute(target) == null){
       temp = temp.parentElement;
     }
-    node_nums.push(temp.getAttribute('data-quickedit-field-id').split('node/')[1].split('/')[0]);
-  })
+    if (drupalSettings.recogito_integration.admin_view_mode)
+      node_nums.push(temp.getAttribute(target).split('node/')[1].split('/')[0]);
+    else
+      node_nums.push(temp.getAttribute(target));
+
+  });
+
 
   var viewers = [];
   temps.forEach(element => viewers.push(OpenSeadragon({
@@ -607,7 +674,9 @@ function addAccessibilityLabel()
 function getAnnotations(recogito, node_num, readonly = false) {
 
   var page_url = window.location.pathname;
-  if (typeof node_num !== "boolean" && node_num !== window.location.pathname.split('/')[2]) page_url = '/node/' + node_num;//make sure a node_num is being used
+
+  if (typeof node_num !== "boolean" && //make sure a node number is actually being used
+      node_num !== window.location.pathname.split('/')[2]) page_url = '/node/' + node_num;//construct the URL is necessary
   jQuery.ajax({
     type: "GET",
     url: "/recogito_integration/get",
