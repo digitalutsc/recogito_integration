@@ -1,31 +1,62 @@
 jQuery(document).ready(function () {
-  console.log(drupalSettings.recogito_integration);
   var can_read_annotations = false;
   var perms = drupalSettings.recogito_integration.permissions;
-
   if (perms['recogito view annotations'] && !window.location.pathname.includes('recogito_integration')) {
-    if(jQuery('.openseadragon-canvas').length > 0){
+    setTimeout(highlightActive, 30);
+    if(jQuery('.openseadragon-canvas').length > 0){ //check for OpenSeadragon
       setTimeout(awaitOpenSeadragonAnnotorious, 300, perms);
     }
-    setTimeout(function (){
-      //initialize annotations for all simple images on the page
-      var imgElements = jQuery("main").find("img");
-      var i;
-      for (i = 0; i<imgElements.length;i++){
-        initSimpleImageAnnotation(imgElements[i], perms);
+   // var articles = jQuery('article');
+    var articles = jQuery("article").find('.node__content');
+    if (!articles.length){ //this should never happen
+      initTextAnnotation(perms);
+      setTimeout(function (){
+        //initialize annotations for all simple images on the page
+        var imgElements = jQuery("main").find("img");
+        var i;
+        for (i = 0; i<imgElements.length;i++){
+          initSimpleImageAnnotation(imgElements[i], perms);
+        }
+      }, 150)
+    }
+    else{
+      for(var j = 0; j < articles.length; j++){
+        var temp_num = articles[j].innerHTML.split('node/')[1].split('/')[0]; //get the node to which the current content belongs
+        //if (articles[j].getAttribute('data-history-node-id')
+          if (temp_num !== null){
+            initTextAnnotation(perms, temp_num, articles[j]);
+            var imgs = articles[j].getElementsByTagName('img');
+            for (var p = 0; p < imgs.length; p++) {
+              initSimpleImageAnnotation(imgs[p], perms, temp_num);//articles[j].getAttribute('data-history-node-id'));
+            }
+        }
       }
-    }, 150)
-    initTextAnnotation(perms);
 
+    }
+  //  initTextAnnotation(perms);
   }
 });
 
 /**
+ * Ensures the active mode is visually selected
+ */
+function highlightActive(){
+  if (window.location.search.includes('?mode=annotation') &&
+      jQuery("ul.primary > li")[2].firstElementChild.className !== 'is-active'){
+    jQuery("ul.primary > li")[2].firstElementChild.className += 'is-active';
+  }
+  else if (!window.location.search.includes('?mode=annotation') &&
+      jQuery("ul.primary > li")[0].firstElementChild.className !== 'is-active'){
+    jQuery("ul.primary > li")[0].firstElementChild.className += 'is-active';
+  }
+}
+/**
  * Setup annotations for simple images (those not in an OpenSeadragon viewer)
  * @param image : Object HTMLImageElement
  * @param perms : assigned permission config
+ * @param node_num : int the node to which the image belongs
  */
-function initSimpleImageAnnotation(image, perms){
+function initSimpleImageAnnotation(image, perms, node_num){
   var user_data = drupalSettings.recogito_integration.user_data;
   var customAttributeName = drupalSettings.recogito_integration.attach_attribute_name;
   var range = drupalSettings.recogito_integration.annotation_range;
@@ -40,21 +71,29 @@ function initSimpleImageAnnotation(image, perms){
   var imgElement = image;
   var anno = Annotorious.init({
     image: imgElement,
-    readOnly: readOnly1 || window.location.search !== "?mode=annotation"
+  //  readOnly: readOnly1 || window.location.search !== "?mode=annotation"
+    readOnly: readOnly1 || !window.location.search.includes('?mode=annotation'),
+    widgets: [
+      'COMMENT',
+      {widget: 'TAG', vocabulary: strings}
+    ],
+    relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
   });
  // var anno = Annotorious.init({image: imgElement});
   anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
 
-  // window.location.hostname + "/modules/recogito_integration/recogito_integration_functions.php"
 
+  // window.location.hostname + "/modules/recogito_integration/recogito_integration_functions.php"
   var page_url = window.location.pathname;
+  var curr_node = window.location.pathname.split('/')[2] == node_num;
+  if (!curr_node) page_url = '/node/' + node_num;
 
   jQuery.ajax({
     type: "GET",
     url: "/recogito_integration/get",
     dataType: 'json',
     headers: {
-      'pageurl': page_url,
+      'pageurl': page_url//'/node/' + node_num
     },
 
     success: function (data) {
@@ -62,8 +101,7 @@ function initSimpleImageAnnotation(image, perms){
       for (annotation in data) {
 
         w3c = convert_annotation_w3c(data[annotation]);
-        if(w3c.type != "Annotation" && imgElement["src"] == w3c["target"]["source"])
-        {
+        if (w3c.type !== "Annotation" && imgElement["src"] == w3c["target"]["source"]) {
           anno.addAnnotation(w3c);
         }
       }
@@ -72,6 +110,8 @@ function initSimpleImageAnnotation(image, perms){
       alert(xhr.responseText);
     }
   });
+
+
 
   anno.on('selectAnnotation', function (annotation) {
     if (!anno.ready) setTimeout(addAccessibilityLabel, 10);
@@ -85,8 +125,14 @@ function initSimpleImageAnnotation(image, perms){
     for (var i = 0; i < annotation.body.length; i++) {
       annotation.body[i].value = encode_utf8(annotation.body[i].value);
     }
-    console.log(annotation.body[i]);
-    create_annotation(annotation);
+
+    // check with John
+    //console.log(annotation.body[i]);
+    //create_annotation(annotation);
+    if (!curr_node)
+      create_annotation(annotation, node_num);
+    else
+      create_annotation(annotation);
   });
 
   anno.on('updateAnnotation', function (annotation, previous) {
@@ -110,22 +156,40 @@ function initSimpleImageAnnotation(image, perms){
  */
 function awaitOpenSeadragonAnnotorious(perms)
 {
-  var id = jQuery(".openseadragon-viewer").attr('id');
+  var ids = [];
+  //get the ids for all OSD viewers on screen
+  jQuery(".openseadragon-viewer").each(function (){
+    if (this.getElementsByClassName('openseadragon-container').length) ids.push(this.getAttribute('id'));
+    else this.remove(); //remove empty viewers
+  })
+
   //remove old viewer
   jQuery('.openseadragon-canvas').remove();  //was hide
   jQuery('.openseadragon-container').remove();  //was hide
-  //get the options for the old viewer
-  var temp = drupalSettings["openseadragon"][id]["options"];
-  //create new viewer using info from old viewer
-  var viewer = OpenSeadragon({
-    id: temp['id'],
-    prefixUrl: temp['prefixUrl'],
-    tileSources: temp['tileSources']
-  });
+
+  //get the options for the old viewers
+  var temps = [];
+  var node_nums = [];
+  ids.forEach(function (element){
+    temps.push(drupalSettings['openseadragon'][element]['options']);
+    var temp = document.getElementById(element);
+    while (temp.getAttribute('data-quickedit-field-id') == null){
+      temp = temp.parentElement;
+    }
+    node_nums.push(temp.getAttribute('data-quickedit-field-id').split('node/')[1].split('/')[0]);
+  })
+
+  var viewers = [];
+  temps.forEach(element => viewers.push(OpenSeadragon({
+    id: element['id'],
+    prefixUrl: element['prefixUrl'],
+    tileSources: element['tileSources'],
+    sequenceMode: element['tileSources'].length > 1 //if there are multiple images in the viewer, show them in sequence
+  })));
 
   if (typeof OpenSeadragon != "undefined" && typeof OpenSeadragon.Annotorious != "undefined"
-    && typeof viewer != "undefined") {
-      initOpenSeadragonAnnnotation(viewer, perms);
+    && typeof viewers !== "undefined") {
+    viewers.forEach((element, index) => initOpenSeadragonAnnnotation(element, perms, node_nums[index]));
   }
 }
 /**
@@ -145,14 +209,16 @@ function initTextAnnotation(perms) {
       !perms['recogito delete own annotations'])
 
   // hide popup if readonly mode is currently set for current anonymous user
-  if (readOnly || window.location.search !== "?mode=annotation") {
-    jQuery("article > div.node__content > div.field--name-body").click(function(e) {
-      jQuery('.r6o-editor').hide();
-      if (e.target.tagName.toLowerCase() === 'span' && (jQuery(e.target).attr('class') === "r6o-annotation")) {
-        jQuery('.r6o-editor').show();
-      }
-    });
-  }
+  //if (readOnly || window.location.search !== "?mode=annotation") {
+    if (readOnly || !window.location.search.includes('?mode=annotation')) {
+      jQuery("article > div.node__content > div.field--name-body").click(function (e) {
+        jQuery('.r6o-editor').hide();
+        if (e.target.tagName.toLowerCase() === 'span' && (jQuery(e.target).attr('class') === "r6o-annotation")) {
+          jQuery('.r6o-editor').show();
+        }
+      });
+    }
+ // }
 
   // visually set Annotation tab item enabled
   jQuery("ul.primary > li").each(function( index ) {
@@ -183,33 +249,120 @@ function initTextAnnotation(perms) {
   }
   else {
     // change background for annotated area:
-    if (window.location.search == "?mode=annotation") {
+    //if (window.location.search == "?mode=annotation") {
+    if (window.location.search.includes("?mode=annotation")){
       jQuery("article > div.node__content").css('background-color', '#dfeaff');
     }
     var attach_element = jQuery("article > div.node__content");
+
   }
 
   // check  annotation are allow to be enable for DOM or content type. If not, display warning
   if (attach_element[0] !== -1 ) {
+
     // need [0] because selector returns an array instead of object
-    for (var i = 0; i < attach_element.length; i++) {
+    if (arguments.length !== 3){
+      for (var i = 0; i < attach_element.length; i++) {
+        var text_anno = Recogito.init({
+          content: attach_element[i], // Element id or DOM node to attach to
+          allowEmpty: true,
+          locale: 'auto',
+          readonly: readOnly,
+          widgets: [
+            'COMMENT',
+            {widget: 'TAG', vocabulary: strings}
+          ],
+          relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
+          // readOnly: readOnly || window.location.search !== "?mode=annotation" //John added this
+        });
+        text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
+
+        getAnnotations(text_anno);
+        if (default_term != -1) { // ignore when no default tag is selected
+          jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
+            if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
+              setTimeout(setDefaultTerm, 10);
+              //setTimeout(addAccessibilityLabel, 10);
+              return;
+            }
+          });
+        }
+
+        text_anno.on('selectAnnotation', function (annotation) {
+          // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+          if (drupalSettings.recogito_integration.initial_setup){
+            highlightAnnotatedContent(annotation);
+            if (text_anno.readOnly == undefined || !text_anno.readOnly) setTimeout(addAccessibilityLabel, 15);
+          }
+          else{
+            alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
+          }
+        });
+        text_anno.on('createAnnotation', function (annotation) {
+          if (default_term != -1) { // ignore when no default tag is selected
+            // set "footnote" as default vocabulary
+            var tmp = annotation.body[0];
+            annotation.body.push({
+              created: tmp.created,
+              creator: tmp.creator,
+              modified: tmp.modified,
+              purpose: "tagging",
+              type: tmp.type,
+              value: default_term,
+            });
+          }
+          // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+          if (drupalSettings.recogito_integration.initial_setup === false)
+            alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
+          else if (perms['recogito create annotations'] === false)
+            alert("Your annotation won't be saved because you don't have permission to create annotation for this content.")
+          else
+            create_annotation(annotation);
+        });
+
+        text_anno.on('updateAnnotation', function (annotation, previous) {
+          // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+          if (drupalSettings.recogito_integration.initial_setup === false)
+            alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
+          else if (perms['recogito edit annotations'] === false)
+            alert("Your annotation won't be saved because you don't have permission to update this annotation of this content.")
+          else
+            update_annotation(annotation, previous);
+        });
+
+        text_anno.on('deleteAnnotation', function (annotation) {
+          // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+
+          if (drupalSettings.recogito_integration.initial_setup === false)
+            alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
+          else if (perms['recogito delete annotations'] === false)
+            alert("Your annotation won't be saved because you don't have permission to update this annotation of this content.")
+          else
+            delete_annotation(annotation);
+        });
+      }
+    }
+    else{
+      var working_node = arguments[1];
       var text_anno = Recogito.init({
-        content: attach_element[i], // Element id or DOM node to attach to
-        allowEmpty: true,
+        content: arguments[2], // Element id or DOM node to attach to
+        allowEmpty: false,  //changed to false by John
         locale: 'auto',
         readonly: readOnly,
         widgets: [
           'COMMENT',
           {widget: 'TAG', vocabulary: strings}
         ],
-        relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs '],
-       // readOnly: readOnly || window.location.search !== "?mode=annotation" //John added this
+        relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
+        // readOnly: readOnly || window.location.search !== "?mode=annotation" //John added this
       });
       text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
 
-      getAnnotations(text_anno);
-
+      // check with John
+      //getAnnotations(text_anno);
       // set default term (if applicable) as default tag
+      getAnnotations(text_anno, arguments[1]);
+
       if (default_term != -1) { // ignore when no default tag is selected
         jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
           if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
@@ -221,7 +374,6 @@ function initTextAnnotation(perms) {
           }
         });
       }
-
       text_anno.on('selectAnnotation', function (annotation) {
         // TODO: check if there is preset configuration ready before intial Recogito JS annotation
         if (drupalSettings.recogito_integration.initial_setup){
@@ -232,6 +384,7 @@ function initTextAnnotation(perms) {
           alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
         }
       });
+
       text_anno.on('createAnnotation', function (annotation) {
         if (default_term != -1) { // ignore when no default tag is selected
 
@@ -257,10 +410,11 @@ function initTextAnnotation(perms) {
           alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
         else if (perms['recogito create annotations'] === false)
           alert("Your annotation won't be saved because you don't have permission to create annotation for this content.")
-        else
-          create_annotation(annotation);
-      });
+        else{
+          create_annotation(annotation, working_node);
+        }
 
+      });
       text_anno.on('updateAnnotation', function (annotation, previous) {
         // TODO: check if there is preset configuration ready before intial Recogito JS annotation
         if (drupalSettings.recogito_integration.initial_setup === false)
@@ -270,7 +424,6 @@ function initTextAnnotation(perms) {
         else
           update_annotation(annotation, previous);
       });
-
       text_anno.on('deleteAnnotation', function (annotation) {
         // TODO: check if there is preset configuration ready before intial Recogito JS annotation
 
@@ -395,6 +548,7 @@ function addCountableTag() {
 }
 
 /**
+<<<<<<< HEAD
  * Kyle added to encode annotation text with diacritics
  * @param s
  * @returns {*}
@@ -416,6 +570,9 @@ function decode_utf8( s )
 
 /**
  * John added to pass accessiblity test for annotations
+=======
+ * Adds the required ARIA attributes for annotation editor
+>>>>>>> 6eb988280b6dda8f837e85bc2f514b5a04457010
  */
 function addAccessibilityLabel()
 {
@@ -445,15 +602,18 @@ function addAccessibilityLabel()
  * Ajax call to get list of annotation base on node url
  *
  * @param recogito
+ * @param node_num : int the node to get the annotations for
  */
-function getAnnotations(recogito, readonly = false) {
+function getAnnotations(recogito, node_num, readonly = false) {
 
+  var page_url = window.location.pathname;
+  if (typeof node_num !== "boolean" && node_num !== window.location.pathname.split('/')[2]) page_url = '/node/' + node_num;//make sure a node_num is being used
   jQuery.ajax({
     type: "GET",
     url: "/recogito_integration/get",
     dataType: 'json',
     headers: {
-      'pageurl': window.location.pathname,
+      'pageurl': page_url
     },
 
     success: function (data) {
@@ -473,10 +633,11 @@ function getAnnotations(recogito, readonly = false) {
  *
  * @param viewer : Object viewer object
  * @param perms : assigned permission config
+ * @param node_num : int the node to which the OSD viewer belongs
  */
-function initOpenSeadragonAnnnotation(viewer, perms) {
-
-  /////////////////////////////////////////////////////////////////////////////////
+function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
+  //////////////////////////////////////////////////////////////////////////////
+  var strings = drupalSettings.recogito_integration.taxonomy_terms;
   var user_data = drupalSettings.recogito_integration.user_data;
   var readOnly1 = (!perms['recogito create annotations'] &&
       !perms['recogito edit annotations'] &&
@@ -485,14 +646,59 @@ function initOpenSeadragonAnnnotation(viewer, perms) {
       !perms['recogito delete own annotations']);
 
   var image_anno = OpenSeadragon.Annotorious(viewer, {
-        readOnly: readOnly1 || window.location.search !== "?mode=annotation"
-      });
+        readOnly: readOnly1 || !window.location.search.includes("?mode=annotation"),
+        widgets: [
+          'COMMENT',
+          {widget: 'TAG', vocabulary: strings}
+        ],
+        relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
 
+      });
   image_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
+
+  //for multi page support
+  viewer.addHandler('page', function (){
+
+    //get rid of any annotations that may be open on the current page
+    setTimeout(function (){
+      jQuery('.r6o-editor').remove();
+
+    }, 20);
+
+    //remove all annotation on the viewer
+    image_anno.clearAnnotations();
+
+    //add annotations that belong to this page
+    jQuery.ajax({
+      type: "GET",
+      url: "/recogito_integration/get",
+      dataType: 'json',
+      headers: {
+        'pageurl': page_url,
+      },
+
+      success: function (data) {
+        console.log(data);
+        for (annotation in data) {
+          w3c = convert_annotation_w3c(data[annotation]);
+          //make sure this annotation belongs here
+          if(w3c.type !== "Annotation" && viewer["tileSources"][viewer.currentPage()] == w3c["target"]["source"])
+          {
+            image_anno.addAnnotation(w3c);
+          }
+        }
+      },
+      error: function (xhr, status, error) {
+        alert(xhr.responseText);
+      }
+    });
+  });
 
  // window.location.hostname + "/modules/recogito_integration/recogito_integration_functions.php"
 
-  var page_url = window.location.pathname;
+  //var page_url = window.location.pathname;
+
+  var page_url = '/node/' + node_num;
 
   jQuery.ajax({
     type: "GET",
@@ -505,10 +711,9 @@ function initOpenSeadragonAnnnotation(viewer, perms) {
     success: function (data) {
       console.log(data);
       for (annotation in data) {
-
         w3c = convert_annotation_w3c(data[annotation]);
         //make sure this annotation belongs here
-        if(w3c.type != "Annotation" && viewer["tileSources"] == w3c["target"]["source"])
+        if(w3c.type !== "Annotation" && viewer["tileSources"][0] == w3c["target"]["source"])
         {
           image_anno.addAnnotation(w3c);
         }
@@ -535,12 +740,15 @@ function initOpenSeadragonAnnnotation(viewer, perms) {
 
   image_anno.on('createAnnotation', function (annotation) {
 
+
     // add a fix for 500 error when add diacritics (.ie: Öçè) to a comment or reply
     //annotation.body[0].value = encode_utf8(annotation.body[0].value);
     for (var i = 0; i < annotation.body.length; i++) {
       annotation.body[i].value = encode_utf8(annotation.body[i].value);
     }
-    create_annotation(annotation);
+    // check with John
+    //create_annotation(annotation);
+    create_annotation(annotation, node_num, viewer.currentPage());
   });
 
   image_anno.on('updateAnnotation', function (annotation, previous) {
@@ -680,11 +888,15 @@ function highlightAnnotatedContent(a) {
  * Create an annotation within Drupal, given W3C data
  *
  * @param a
+ * @param node_num : int the on which the annotation is created
  */
-function create_annotation(a) {
-  var page_url = window.location.pathname;
-
+function create_annotation(a, /*, node_num*/) {
+  var page_url;
   var annotation_obj = convert_annotation_object(a);
+
+  // check with John
+  arguments.length >= 2 ? page_url = '/node/' + arguments[1] : page_url = window.location.pathname;
+
 
   jQuery.ajax({
     type: "POST",
@@ -853,5 +1065,6 @@ function convert_annotation_w3c(annotation_object) {
     newtextualbody.value = annotation_object.textualbodies[textualbody].value[0].value;
     annotation_w3c.body.push(newtextualbody);
   }
+
   return annotation_w3c;
 }
