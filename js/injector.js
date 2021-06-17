@@ -349,6 +349,7 @@ function initTextAnnotation(perms) {
           jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
             if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
               setTimeout(setDefaultTerm, 10);
+
               //setTimeout(addAccessibilityLabel, 10);
               return;
             }
@@ -445,7 +446,13 @@ function initTextAnnotation(perms) {
         // TODO: check if there is preset configuration ready before intial Recogito JS annotation
         if (drupalSettings.recogito_integration.initial_setup){
           highlightAnnotatedContent(annotation);
-          if (text_anno.readOnly == undefined || !text_anno.readOnly) setTimeout(addAccessibilityLabel, 15);
+          if (text_anno.readOnly == undefined || !text_anno.readOnly) {
+            setTimeout(addAccessibilityLabel, 15);
+            if (window.location.search !== "?mode=annotation") {
+              setTimeout(displayAnnotationAsHTML, 20);
+            }
+          }
+
         }
         else{
           alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
@@ -527,6 +534,22 @@ function setDefaultTerm() {
   );
   //jQuery(".r6o-btn").html("Save");
   //jQuery(".r6o-btn.outline").html("Cancel");
+
+
+}
+
+/**
+ * Kyle added due to request of support HTML tag in annotation text (ie.italic)
+ */
+function displayAnnotationAsHTML () {
+  // Kyle added for support italic for annotation text
+  jQuery(".r6o-editable-text").each( function (index) {
+    if (jQuery(this).prop('disabled') === true) {
+      console.log(jQuery(this).prop('disabled'));
+      jQuery(this).before('<div class="readonly-anno">' + jQuery(this).val()+ '</div>');
+      jQuery(this).hide();
+    }
+  });
 }
 
 

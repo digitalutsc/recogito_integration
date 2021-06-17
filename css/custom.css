@@ -10,3 +10,16 @@
   width: 100% !important;
   height: auto !important;
 }
+
+.readonly-anno {
+  display:block;
+  color: #7e96a7;
+  max-height: 120px;
+  overflow: auto;
+  outline: none;
+  min-height: 2em;
+  font-size: 14px;
+  font-family: 'Lato', sans-serif;
+  padding:10px;
+  border-left: 6px solid #d7e1e7;
+}
