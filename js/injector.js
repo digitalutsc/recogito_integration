@@ -1,4 +1,17 @@
 jQuery(document).ready(function () {
+
+  // kyle added to handle the issue View tab and Add/Edit Annotation have same URL
+  if (window.location.search.includes('?mode=annotation')) {
+    jQuery("a.tabs__link").each(function (index) {
+        if (jQuery(this).text().includes("View") && jQuery(this).attr("href").includes('?mode=annotation')) {
+            $newurl = jQuery(this).attr("href").replace("?mode=annotation", "");
+            jQuery(this).attr("href", $newurl);
+            jQuery(this).removeClass("is-active");
+            return false;
+        }
+    });
+  }
+
   var can_read_annotations = false;
   var perms = drupalSettings.recogito_integration.permissions;
   if (perms['recogito view annotations'] && !window.location.pathname.includes('recogito_integration')) {
@@ -275,17 +288,29 @@ function initTextAnnotation(perms) {
       !perms['recogito edit own annotations'] &&
       !perms['recogito delete own annotations'])
 
-  // hide popup if readonly mode is currently set for current anonymous user
-  //if (readOnly || window.location.search !== "?mode=annotation") {
-    if (readOnly || !window.location.search.includes('?mode=annotation')) {
-      jQuery("article > div.node__content > div.field--name-body").click(function (e) {
-        jQuery('.r6o-editor').hide();
-        if (e.target.tagName.toLowerCase() === 'span' && (jQuery(e.target).attr('class') === "r6o-annotation")) {
-          jQuery('.r6o-editor').show();
-        }
-      });
-    }
- // }
+  // When in View mode (View tab is active), Show annotation in readonly
+  if (readOnly || !window.location.search.includes('?mode=annotation')) {
+    jQuery("article > div.node__content > div.field--name-body").click(function (e) {
+      // Kyle added this to enforce hide the annotation for View Tab
+      jQuery('.r6o-editor').attr('style','display:none !important');
+      if (e.target.tagName.toLowerCase() === 'span' && (jQuery(e.target).attr('class') === "r6o-annotation")) {
+        jQuery('.r6o-editor').show();
+
+        // hide reply and tag textfield, modify footer buttons 
+        setTimeout(() => {
+          jQuery('.r6o-editor').find("div.r6o-widget.comment.editable").hide();
+          jQuery('.r6o-editor').find("div[role='combobox']").hide();
+          jQuery("button.r6o-btn").each(function(index) {
+            if (jQuery(this).text() === "Ok")
+              jQuery(this).hide();
+            else
+              jQuery(this).html("Ok");
+          });
+        }, 10);
+
+      }
+    });
+  }
 
   // visually set Annotation tab item enabled
   jQuery("ul.primary > li").each(function( index ) {
@@ -448,6 +473,8 @@ function initTextAnnotation(perms) {
           highlightAnnotatedContent(annotation);
           if (text_anno.readOnly == undefined || !text_anno.readOnly) {
             setTimeout(addAccessibilityLabel, 15);
+
+            // only View tab or Front facing show rendered HTML annotation text
             if (window.location.search !== "?mode=annotation") {
               setTimeout(displayAnnotationAsHTML, 20);
             }
