@@ -5,7 +5,8 @@ recogito_injection:
       css/annotorious.min.css: { weight: -5 }
       css/overwrite_hidden.css: {weight: -6}
       css/custom.css: {weight: -5}
-      #css/custom2.min.css: { weight: -4 }
+      # css/custom2.min.css: { weight: -4 }
+      css/delete_button.css: {weight: -4}
       css/style.css: {weight: -5}
   js:
     js/recogito.min.js: { weight: -3 }

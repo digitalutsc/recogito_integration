@@ -3,12 +3,12 @@ jQuery(document).ready(function () {
   // kyle added to handle the issue View tab and Add/Edit Annotation have same URL
   if (window.location.search.includes('?mode=annotation')) {
     jQuery("a.tabs__link").each(function (index) {
-        if (jQuery(this).text().includes("View") && jQuery(this).attr("href").includes('?mode=annotation')) {
-            $newurl = jQuery(this).attr("href").replace("?mode=annotation", "");
-            jQuery(this).attr("href", $newurl);
-            jQuery(this).removeClass("is-active");
-            return false;
-        }
+      if (jQuery(this).text().includes("View") && jQuery(this).attr("href").includes('?mode=annotation')) {
+        $newurl = jQuery(this).attr("href").replace("?mode=annotation", "");
+        jQuery(this).attr("href", $newurl);
+        jQuery(this).removeClass("is-active");
+        return false;
+      }
     });
   }
 
@@ -139,11 +139,11 @@ function initSimpleImageAnnotation(image, perms, node_num){
       !perms['recogito delete annotations'] &&
       !perms['recogito edit own annotations'] &&
       !perms['recogito delete own annotations'])
- // var imgElement = document.querySelector('img[loading="lazy"]');
+  // var imgElement = document.querySelector('img[loading="lazy"]');
   var imgElement = image;
   var anno = Annotorious.init({
     image: imgElement,
-  //  readOnly: readOnly1 || window.location.search !== "?mode=annotation"
+    //  readOnly: readOnly1 || window.location.search !== "?mode=annotation"
     readOnly: readOnly1 || !window.location.search.includes('?mode=annotation'),
     widgets: [
       'COMMENT',
@@ -151,7 +151,7 @@ function initSimpleImageAnnotation(image, perms, node_num){
     ],
     relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
   });
- // var anno = Annotorious.init({image: imgElement});
+  // var anno = Annotorious.init({image: imgElement});
   anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
 
 
@@ -267,8 +267,11 @@ function awaitOpenSeadragonAnnotorious(perms)
     sequenceMode: element['tileSources'].length > 1 //if there are multiple images in the viewer, show them in sequence
   })));
 
-  if (typeof OpenSeadragon != "undefined" && typeof OpenSeadragon.Annotorious != "undefined"
-    && typeof viewers !== "undefined") {
+  console.log(OpenSeadragon);
+  console.log(OpenSeadragon.Annotorious);
+  if (typeof OpenSeadragon != "undefined"// && typeof OpenSeadragon.Annotorious != "undefined"
+      && typeof viewers !== "undefined") {
+
     viewers.forEach((element, index) => initOpenSeadragonAnnnotation(element, perms, node_nums[index]));
   }
 }
@@ -289,28 +292,28 @@ function initTextAnnotation(perms) {
       !perms['recogito delete own annotations'])
 
   // When in View mode (View tab is active), Show annotation in readonly
-  if (readOnly || !window.location.search.includes('?mode=annotation')) {
-    jQuery("article > div.node__content > div.field--name-body").click(function (e) {
-      // Kyle added this to enforce hide the annotation for View Tab
-      jQuery('.r6o-editor').attr('style','display:none !important');
-      if (e.target.tagName.toLowerCase() === 'span' && (jQuery(e.target).attr('class') === "r6o-annotation")) {
-        jQuery('.r6o-editor').show();
+  /* if (readOnly || !window.location.search.includes('?mode=annotation')) {
+     jQuery("article > div.node__content > div.field--name-body").click(function (e) {
+       // Kyle added this to enforce hide the annotation for View Tab
+       jQuery('.r6o-editor').attr('style','display:none !important');
+       if (e.target.tagName.toLowerCase() === 'span' && (jQuery(e.target).attr('class') === "r6o-annotation")) {
+         jQuery('.r6o-editor').show();
 
-        // hide reply and tag textfield, modify footer buttons 
-        setTimeout(() => {
-          jQuery('.r6o-editor').find("div.r6o-widget.comment.editable").hide();
-          jQuery('.r6o-editor').find("div[role='combobox']").hide();
-          jQuery("button.r6o-btn").each(function(index) {
-            if (jQuery(this).text() === "Ok")
-              jQuery(this).hide();
-            else
-              jQuery(this).html("Ok");
-          });
-        }, 10);
+         // hide reply and tag textfield, modify footer buttons
+         setTimeout(() => {
+           jQuery('.r6o-editor').find("div.r6o-widget.comment.editable").hide();
+           jQuery('.r6o-editor').find("div[role='combobox']").hide();
+           jQuery("button.r6o-btn").each(function(index) {
+             if (jQuery(this).text() === "Ok")
+               jQuery(this).hide();
+             else
+               jQuery(this).html("Ok");
+           });
+         }, 10);
 
-      }
-    });
-  }
+       }
+     });
+   } */
 
   // visually set Annotation tab item enabled
   jQuery("ul.primary > li").each(function( index ) {
@@ -468,8 +471,11 @@ function initTextAnnotation(perms) {
         });
       }
       text_anno.on('selectAnnotation', function (annotation) {
+        console.log('this = ' + this);
         // TODO: check if there is preset configuration ready before intial Recogito JS annotation
         if (drupalSettings.recogito_integration.initial_setup){
+          console.log('annotation: ' + JSON.stringify(annotation));
+          window.location.search.includes("?mode=annotation") && setTimeout(addDeleteButton, 30, annotation, text_anno);
           highlightAnnotatedContent(annotation);
           if (text_anno.readOnly == undefined || !text_anno.readOnly) {
             setTimeout(addAccessibilityLabel, 15);
@@ -492,7 +498,7 @@ function initTextAnnotation(perms) {
           // add a fix for 500 error when add diacritics (.ie: Öçè) to a comment or reply
           //annotation.body[0].value = encode_utf8(annotation.body[0].value);
           for (var i = 0; i < annotation.body.length; i++) {
-              annotation.body[i].value = encode_utf8(annotation.body[i].value);
+            annotation.body[i].value = encode_utf8(annotation.body[i].value);
           }
 
           // set "footnote" as default vocabulary
@@ -581,8 +587,8 @@ function displayAnnotationAsHTML () {
 
 
 /**
- * Kyle added an UI for textfield character/word counter in case we like to limit the length of comment textfield
- * Currently unused
+ * Kyle added an UI for textfield character/word counter in case we like to
+ * limit the length of comment textfield Currently unused
  */
 function modifyImageAnnotation() {
   jQuery(".r6o-autocomplete").find('input').attr("placeholder", "Add a tag (press ENTER for each tag)");
@@ -595,19 +601,19 @@ function setDefaultTermImageAnnotation() {
   var term = drupalSettings.recogito_integration.default_term;
   var div = jQuery(".r6o-tag").find('div')[1];
   jQuery(div).html(
-    '<ul class="r6o-taglist">' +
-    '<li>' +
-    '<span class="r6o-label">'+term+ '</span>' +
-    '</li>' +
-    '</ul>'
+      '<ul class="r6o-taglist">' +
+      '<li>' +
+      '<span class="r6o-label">'+term+ '</span>' +
+      '</li>' +
+      '</ul>'
   );
   //jQuery(".r6o-btn").html("Save");
   //jQuery(".r6o-btn.outline").html("Cancel");
 }
 
 /**
- * Kyle added an UI for textfield character/word counter in case we like to limit the length of comment textfield
- * Currently unused
+ * Kyle added an UI for textfield character/word counter in case we like to
+ * limit the length of comment textfield Currently unused
  */
 function addCountWords() {
   // add countable feature for
@@ -638,8 +644,8 @@ function addCountWords() {
 }
 
 /**
- * Kyle added an UI for textfield character/word counter in case we like to limit the length of comment textfield
- * Currently unused
+ * Kyle added an UI for textfield character/word counter in case we like to
+ * limit the length of comment textfield Currently unused
  */
 function addCountableTag() {
 
@@ -665,7 +671,7 @@ function addCountableTag() {
 }
 
 /**
-<<<<<<< HEAD
+ <<<<<<< HEAD
  * Kyle added to encode annotation text with diacritics
  * @param s
  * @returns {*}
@@ -687,9 +693,9 @@ function decode_utf8( s )
 
 /**
  * John added to pass accessiblity test for annotations
-=======
+ =======
  * Adds the required ARIA attributes for annotation editor
->>>>>>> 6eb988280b6dda8f837e85bc2f514b5a04457010
+ >>>>>>> 6eb988280b6dda8f837e85bc2f514b5a04457010
  */
 function addAccessibilityLabel()
 {
@@ -765,24 +771,23 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
       !perms['recogito delete own annotations']);
 
   var image_anno = OpenSeadragon.Annotorious(viewer, {
-        readOnly: readOnly1 || !window.location.search.includes("?mode=annotation"),
-        widgets: [
-          'COMMENT',
-          {widget: 'TAG', vocabulary: strings}
-        ],
-        relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
+    readOnly: readOnly1 || !window.location.search.includes("?mode=annotation"),
+    widgets: [
+      'COMMENT',
+      {widget: 'TAG', vocabulary: strings}
+    ],
+    relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
 
-      });
+  });
   image_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
 
   //for multi page support
+  //this was added in newest update, so may be able to remove this in the future with additional configuration
   viewer.addHandler('page', function (){
-
+    ``
     //get rid of any annotations that may be open on the current page
-    setTimeout(function (){
-      jQuery('.r6o-editor').remove();
+    image_anno.cancelSelected();
 
-    }, 20);
 
     //remove all annotation on the viewer
     image_anno.clearAnnotations();
@@ -813,12 +818,11 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
     });
   });
 
- // window.location.hostname + "/modules/recogito_integration/recogito_integration_functions.php"
+  // window.location.hostname + "/modules/recogito_integration/recogito_integration_functions.php"
 
   //var page_url = window.location.pathname;
 
   var page_url = '/node/' + node_num;
-
   jQuery.ajax({
     type: "GET",
     url: "/recogito_integration/get",
@@ -844,15 +848,22 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
   });
 
   image_anno.on('selectAnnotation', function (annotation) {
-    if (!image_anno.readOnly) setTimeout(addAccessibilityLabel, 15);
-    highlightAnnotatedContent(annotation);
-    if (image_anno.readOnly){
+    if (!image_anno.readOnly){
+      setTimeout(addAccessibilityLabel, 15);
+      highlightAnnotatedContent(annotation);
+      // alignHandles();
+      /* var handles = jQuery('.a9s-handle');
+       for (let i = 0; i < handles.length; i++) {
+         handles[i].children[0].setAttribute('transform', 'scale(1, 1)')
+       }*/
+    }
+    else if (image_anno.readOnly){
+      highlightAnnotatedContent(annotation);
       setTimeout(function (){
         if (!jQuery(".r6o-label").length){
           jQuery(".r6o-widget.r6o-tag").hide();
         }
       }, 25);
-
     }
 
   });
@@ -869,7 +880,6 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
     //create_annotation(annotation);
     create_annotation(annotation, node_num, viewer.currentPage());
   });
-
   image_anno.on('updateAnnotation', function (annotation, previous) {
 
     console.log(annotation);
@@ -884,7 +894,36 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
     delete_annotation(annotation);
   });
 }
+function alignHandles(){
+  var x = jQuery('.a9s-handle')[0].previousSibling.getElementsByClassName('a9s-outer')[0].getAttribute('x');
+  var y = jQuery('.a9s-handle')[0].previousSibling.getElementsByClassName('a9s-outer')[0].getAttribute('y');
+  var width = jQuery('.a9s-handle')[0].previousSibling.getElementsByClassName('a9s-outer')[0].getAttribute('width');
+  var height = jQuery('.a9s-handle')[0].previousSibling.getElementsByClassName('a9s-outer')[0].getAttribute('height');
 
+  var new_transform_origin = x + 'px ' + y + 'px';
+  //jQuery('.a9s-handle')[0].setAttribute('transform-origin', new_transform_origin);
+  jQuery('.a9s-handle')[0].children[0].setAttribute('transform', 'scale(1, 1)');
+}
+function addDeleteButton(annotation, text_anno){
+  var footer = document.getElementsByClassName('r6o-footer');
+
+  var delete_button = document.createElement('button');
+  delete_button.innerHTML = 'Delete';
+  delete_button.className = 'delete-text-annotation';
+  /* delete_button.style.position = 'relative';
+   delete_button.style.right = '300px';*/
+  delete_button.style.cssFloat = 'left';
+  delete_button.style.marginLeft =
+      delete_button.onclick = function (){
+        if (!window.confirm("Are you sure you want to delete this annotation?\nThis action cannot be undone.")) return;
+        text_anno.removeAnnotation(annotation);
+        delete_annotation(annotation);
+      }
+  for (let i = 0; i < footer.length; i++) {
+    if (footer[i].getElementsByClassName('r6o-btn').length < 3) footer[i].appendChild(delete_button);
+  }
+
+}
 /**
  * When selecting an annotation, remove buttons the user has insufficient
  * permissions for
@@ -935,12 +974,12 @@ function highlightAnnotatedContent(a) {
       }
       if (readOnly) {
         jQuery('.r6o-arrow-down').hide();
-       // jQuery('.a9s-annotation.editable.selected').attr("class", ".r6o-editor");
+        // jQuery('.a9s-annotation.editable.selected').attr("class", ".r6o-editor");
       }
-    /*  if (window.location.search !== "?mode=annotation"){
+      /*  if (window.location.search !== "?mode=annotation"){
 
-        jQuery(".r6o-widget.r6o-tag").hide();
-      }*/
+          jQuery(".r6o-widget.r6o-tag").hide();
+        }*/
 
       // loop through replies to enfource Readonly mode or not
       jQuery('.r6o-widget').each(function (index) {
@@ -1050,7 +1089,7 @@ function create_annotation(a, /*, node_num*/) {
 function update_annotation(annotation, previous) {
   // add a fix for 500 error when update annotation with diacritics (.ie: Öçè) in any text field.
   for (var i = 0; i < annotation.body.length; i++) {
-      annotation.body[i].value = encode_utf8(annotation.body[i].value);
+    annotation.body[i].value = encode_utf8(annotation.body[i].value);
   }
 
   var annotation_obj = convert_annotation_object(annotation);
@@ -1079,6 +1118,11 @@ function update_annotation(annotation, previous) {
  */
 function delete_annotation(annotation) {
   var annotation_obj = convert_annotation_object(annotation);
+  for (let i = 0; i < annotation_obj['textualbodies'].length; i++) {
+    //empty out contents before deleting to avoid issues with diacritics
+    annotation_obj['textualbodies'][i]['value'] = '';
+  }
+
   console.log(annotation_obj);
   jQuery.ajax({
     type: "DELETE",
@@ -1125,8 +1169,9 @@ function convert_annotation_object(a) {
     for (selector in a.target.selector) {
       if (a.target.selector[selector].type == 'TextQuoteSelector') {
 
-          // add a fix for 500 error when select diacritics (.ie: Öçè) in a node
-          annotation_object.target_exact = encode_utf8(a.target.selector[selector].exact);
+        // add a fix for 500 error when select diacritics (.ie: Öçè) in a node
+        annotation_object.target_exact = encode_utf8(a.target.selector[selector].exact);
+
 
       } else if (a.target.selector[selector].type == 'TextPositionSelector') {
         annotation_object.target_start = a.target.selector[selector].start;
@@ -1190,3 +1235,4 @@ function convert_annotation_w3c(annotation_object) {
 
   return annotation_w3c;
 }
+
