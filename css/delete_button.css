@@ -1,0 +1,48 @@
+.delete-text-annotation {
+  background-color: #3a79ba;
+  border: 1px solid #4483c4;
+  box-sizing: border-box;
+  color: #fff;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 14px;
+  margin: 0;
+  outline: none;
+  text-decoration: none;
+  white-space: nowrap;
+  padding: 6px 18px;
+  min-width: 70px;
+  vertical-align: middle;
+  -webkit-border-radius: 2px;
+  -khtml-border-radius: 2px;
+  -moz-border-radius: 2px;
+  margin-left: 6px;
+  border-radius: 2px
+}
+
+.delete-text-annotation * {
+  vertical-align: middle
+}
+
+.delete-text-annotation .r6o-icon {
+  margin-right: 4px
+}
+
+.delete-text-annotation:disabled {
+  border-color: #a3c2e2 !important;
+  background-color: #a3c2e2 !important
+}
+
+.delete-text-annotation:hover {
+  /*background-color: #4f92d7;
+  border-color: #4f92d7*/
+  background-color: #f54e2a;
+  border-color: #f54e2a
+}
+
+.delete-text-annotation.outline {
+  border: 1px solid #3a79ba;
+  color: #3a79ba;
+  background-color: transparent;
+  text-shadow: none
+}

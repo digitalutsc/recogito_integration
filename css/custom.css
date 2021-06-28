@@ -23,3 +23,6 @@
   padding:10px;
   border-left: 6px solid #d7e1e7;
 }
+.r6o-widget:empty{
+  display: none!important;
+}
