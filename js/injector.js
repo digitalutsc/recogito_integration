@@ -113,7 +113,7 @@ function initializeNonAdmin(perms){
  * Ensures the active mode is visually selected
  */
 function highlightActive(){
-  if (window.location.search.includes('?mode=annotation') &&
+  if (window.location.search.includes('?mode=annotation') && (jQuery("ul.primary > li")[2]!== undefined) &&
       jQuery("ul.primary > li")[2].firstElementChild.className !== 'is-active'){
     jQuery("ul.primary > li")[2].firstElementChild.className += 'is-active';
   }
