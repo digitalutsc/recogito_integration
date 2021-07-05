@@ -117,7 +117,7 @@ function highlightActive(){
       jQuery("ul.primary > li")[2].firstElementChild.className !== 'is-active'){
     jQuery("ul.primary > li")[2].firstElementChild.className += 'is-active';
   }
-  else if (!window.location.search.includes('?mode=annotation') &&
+  else if (!window.location.search.includes('?mode=annotation') && (jQuery("ul.primary > li")[0] !== undefined) &&
       jQuery("ul.primary > li")[0].firstElementChild.className !== 'is-active'){
     jQuery("ul.primary > li")[0].firstElementChild.className += 'is-active';
   }
@@ -251,9 +251,10 @@ function awaitOpenSeadragonAnnotorious(perms)
     while (temp.getAttribute(target) == null){
       temp = temp.parentElement;
     }
-    if (drupalSettings.recogito_integration.admin_view_mode)
-      node_nums.push(temp.getAttribute(target).split('node/')[1].split('/')[0]);
-    else
+    if (drupalSettings.recogito_integration.admin_view_mode){
+       if (temp.getAttribute(target).split('node/')[1] !== undefined)
+       node_nums.push(temp.getAttribute(target).split('node/')[1].split('/')[0]);
+    }else
       node_nums.push(temp.getAttribute(target));
 
   });
