@@ -3,7 +3,7 @@ const MAX_TAG_LENGTH = '150'
 jQuery(document).ready(function () {
   // kyle added to handle the issue View tab and Add/Edit Annotation have same URL
   if (window.location.search.includes('?mode=annotation')) {
-    jQuery("a.tabs__link").each(function (index) {
+    jQuery("ul.tabs li a").each(function (index) {
       if (jQuery(this).text().includes("View") && jQuery(this).attr("href").includes('?mode=annotation')) {
         $newurl = jQuery(this).attr("href").replace("?mode=annotation", "");
         jQuery(this).attr("href", $newurl);
