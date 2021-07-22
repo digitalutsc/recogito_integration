@@ -1,5 +1,6 @@
+var global_annos = []
+const MAX_TAG_LENGTH = '150'
 jQuery(document).ready(function () {
-
   // kyle added to handle the issue View tab and Add/Edit Annotation have same URL
   if (window.location.search.includes('?mode=annotation')) {
     jQuery("a.tabs__link").each(function (index) {
@@ -29,6 +30,15 @@ jQuery(document).ready(function () {
 });
 
 /**
+ * Cancels the selection of all image (simple & OSD)
+ */
+function cancelAllSelections(){
+  for (var i = 0; i < global_annos.length; i++) {
+    if(global_annos[i] !== undefined) global_annos[i].cancelSelected();
+  }
+}
+
+/**
  * initialize annotations for Admin
  * @param perms : assigned permission config
  */
@@ -52,7 +62,7 @@ function initializeAdmin(perms){
       var temp_num = article_content[j].innerHTML.split('node/')[1].split('/')[0]; //get the node to which the current content belongs
       //if (articles[j].getAttribute('data-history-node-id')
       if (temp_num !== null){
-        initTextAnnotation(perms, temp_num, article_content[j]);
+        if (article_content[j].getElementsByTagName('p').length !== 0) initTextAnnotation(perms, temp_num, article_content[j]); //make sure there is text here
         var imgs = article_content[j].getElementsByTagName('img');
         for (var p = 0; p < imgs.length; p++) {
           initSimpleImageAnnotation(imgs[p], perms, temp_num);
@@ -159,7 +169,7 @@ function initSimpleImageAnnotation(image, perms, node_num){
   var page_url = window.location.pathname;
   var curr_node = window.location.pathname.split('/')[2] == node_num;
   if (!curr_node) page_url = '/node/' + node_num;
-
+ // !global_annos.includes(anno) && global_annos.push(anno);
   jQuery.ajax({
     type: "GET",
     url: "/recogito_integration/get",
@@ -175,19 +185,30 @@ function initSimpleImageAnnotation(image, perms, node_num){
         w3c = convert_annotation_w3c(data[annotation]);
         if (w3c.type !== "Annotation" && imgElement["src"] == w3c["target"]["source"]) {
           anno.addAnnotation(w3c);
+        //  global_annos.push(w3c);
+
         }
       }
+
     },
     error: function (xhr, status, error) {
       alert(xhr.responseText);
     }
   });
+/*  jQuery(document).click(function(event) {
+    var $target = jQuery(event.target);
+    if(!$target.closest(anno).length) {
+      console.log('closing');
+      console.log(anno);
+    }
+  });*/
 
 
 
   anno.on('selectAnnotation', function (annotation) {
     if (!anno.ready) setTimeout(addAccessibilityLabel, 10);
     highlightAnnotatedContent(annotation);
+    if (readOnly1 || !window.location.search.includes('?mode=annotation'))setTimeout(fixList, 25);
   });
 
   anno.on('createAnnotation', function (annotation) {
@@ -210,7 +231,7 @@ function initSimpleImageAnnotation(image, perms, node_num){
 
     console.log(annotation);
     console.log(previous);
-    update_annotation(annotation, previous);
+    if (JSON.stringify(annotation) !== JSON.stringify(previous)) update_annotation(annotation, previous); //only update if there is actually a change (reduces unneccessary refresh)
   });
 
   anno.on('deleteAnnotation', function (annotation) {
@@ -268,8 +289,6 @@ function awaitOpenSeadragonAnnotorious(perms)
     sequenceMode: element['tileSources'].length > 1 //if there are multiple images in the viewer, show them in sequence
   })));
 
-  console.log(OpenSeadragon);
-  console.log(OpenSeadragon.Annotorious);
   if (typeof OpenSeadragon != "undefined"// && typeof OpenSeadragon.Annotorious != "undefined"
       && typeof viewers !== "undefined") {
 
@@ -363,13 +382,13 @@ function initTextAnnotation(perms) {
           content: attach_element[i], // Element id or DOM node to attach to
           allowEmpty: true,
           locale: 'auto',
-          readonly: readOnly,
+         // readonly: readOnly,
           widgets: [
             'COMMENT',
             {widget: 'TAG', vocabulary: strings}
           ],
-          relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
-          // readOnly: readOnly || window.location.search !== "?mode=annotation" //John added this
+          relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs '],
+          readOnly: readOnly && !window.location.search.includes("?mode=annotation") //John added this
         });
         text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
 
@@ -377,7 +396,9 @@ function initTextAnnotation(perms) {
         if (default_term != -1) { // ignore when no default tag is selected
           jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
             if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
+              cancelAllSelections();
               setTimeout(setDefaultTerm, 10);
+             // console.log('highlighing');
 
               //setTimeout(addAccessibilityLabel, 10);
               return;
@@ -386,10 +407,28 @@ function initTextAnnotation(perms) {
         }
 
         text_anno.on('selectAnnotation', function (annotation) {
+
           // TODO: check if there is preset configuration ready before intial Recogito JS annotation
           if (drupalSettings.recogito_integration.initial_setup){
             highlightAnnotatedContent(annotation);
             if (text_anno.readOnly == undefined || !text_anno.readOnly) setTimeout(addAccessibilityLabel, 15);
+            if (readOnly || !window.location.search.includes("?mode=annotation") ) {
+              setTimeout(function () {
+                var tag_lists = jQuery(".r6o-widget.r6o-tag");
+                for (let i = 0; i < tag_lists.length; i++) {
+                  if (tag_lists[i].getElementsByClassName('r6o-taglist').length == 0)
+                    tag_lists[i].style.display = 'none';
+                }
+                /*if (!jQuery(".r6o-label").length) {
+                  jQuery(".r6o-widget.r6o-tag").hide();
+                }*/
+              }, 25);
+              setTimeout(fixList, 25);
+            }
+            else {
+              cancelAllSelections();
+              if(readOnly || !window.location.search.includes("?mode=annotation")) setTimeout(fixList, 25);
+            }
           }
           else{
             alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
@@ -424,7 +463,13 @@ function initTextAnnotation(perms) {
           else if (perms['recogito edit annotations'] === false)
             alert("Your annotation won't be saved because you don't have permission to update this annotation of this content.")
           else
-            update_annotation(annotation, previous);
+          {
+            /*console.log(previous);
+            console.log(annotation);
+            return;*/
+            if (JSON.stringify(annotation) !== JSON.stringify(previous))
+              update_annotation(annotation, previous);
+          }
         });
 
         text_anno.on('deleteAnnotation', function (annotation) {
@@ -450,11 +495,10 @@ function initTextAnnotation(perms) {
           'COMMENT',
           {widget: 'TAG', vocabulary: strings}
         ],
-        relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs ']
-        // readOnly: readOnly || window.location.search !== "?mode=annotation" //John added this
+        relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs '],
+        readOnly: readOnly || !window.location.search.includes("?mode=annotation")  //John added this
       });
       text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
-
       // check with John
       //getAnnotations(text_anno);
       // set default term (if applicable) as default tag
@@ -463,19 +507,22 @@ function initTextAnnotation(perms) {
       if (default_term != -1) { // ignore when no default tag is selected
         jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
           if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
+            cancelAllSelections();
             setTimeout(setDefaultTerm, 10);
             //setTimeout(addCountWords, 25);
-            setTimeout(addCountableTag, 25);
+           // setTimeout(addCountableTag, 25);
+            setTimeout(addMaxLength, 25);
 
             return;
           }
         });
       }
       text_anno.on('selectAnnotation', function (annotation) {
-        console.log('this = ' + this);
+
+
+//        resizeList();
         // TODO: check if there is preset configuration ready before intial Recogito JS annotation
         if (drupalSettings.recogito_integration.initial_setup){
-          console.log('annotation: ' + JSON.stringify(annotation));
           window.location.search.includes("?mode=annotation") && setTimeout(addDeleteButton, 30, annotation, text_anno);
           highlightAnnotatedContent(annotation);
           if (text_anno.readOnly == undefined || !text_anno.readOnly) {
@@ -486,6 +533,22 @@ function initTextAnnotation(perms) {
               setTimeout(displayAnnotationAsHTML, 20);
             }
           }
+          if (readOnly || !window.location.search.includes("?mode=annotation") ) {
+            setTimeout(function () {
+              var tag_lists = jQuery(".r6o-widget.r6o-tag");
+              for (let i = 0; i < tag_lists.length; i++) {
+                if (tag_lists[i].getElementsByClassName('r6o-taglist').length == 0)
+                  tag_lists[i].style.display = 'none';
+              }
+              /*if (!jQuery(".r6o-label").length) {
+                jQuery(".r6o-widget.r6o-tag").hide();
+              }*/
+            }, 25);
+            setTimeout(fixList, 25);
+          }
+          else {
+            cancelAllSelections();
+          }
 
         }
         else{
@@ -494,6 +557,7 @@ function initTextAnnotation(perms) {
       });
 
       text_anno.on('createAnnotation', function (annotation) {
+        console.log('creating');
         if (default_term != -1) { // ignore when no default tag is selected
 
           // add a fix for 500 error when add diacritics (.ie: Öçè) to a comment or reply
@@ -529,8 +593,10 @@ function initTextAnnotation(perms) {
           alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
         else if (perms['recogito edit annotations'] === false)
           alert("Your annotation won't be saved because you don't have permission to update this annotation of this content.")
-        else
-          update_annotation(annotation, previous);
+        else {
+          if (JSON.stringify(annotation) !== JSON.stringify(previous)) //only update if there is actually a change (reduces unneccessary refresh)
+            update_annotation(annotation, previous);
+        }
       });
       text_anno.on('deleteAnnotation', function (annotation) {
         // TODO: check if there is preset configuration ready before intial Recogito JS annotation
@@ -559,6 +625,7 @@ function initTextAnnotation(perms) {
 function setDefaultTerm() {
   var term = drupalSettings.recogito_integration.default_term;
   var div = jQuery(".r6o-tag").find('div')[0];
+
   jQuery(div).html(
       '<ul class="r6o-taglist">' +
       '<li>' +
@@ -568,7 +635,6 @@ function setDefaultTerm() {
   );
   //jQuery(".r6o-btn").html("Save");
   //jQuery(".r6o-btn.outline").html("Cancel");
-
 
 }
 
@@ -613,6 +679,15 @@ function setDefaultTermImageAnnotation() {
 }
 
 /**
+ * Fixes issues where list overflows in readOnly mode
+ */
+function fixList(){
+  var tag_lists = jQuery('.r6o-widget.r6o-tag');
+  for (let i = 0; i < tag_lists.length; i++) {
+    tag_lists[i].style.overflow='scroll';
+  }
+}
+/**
  * Kyle added an UI for textfield character/word counter in case we like to
  * limit the length of comment textfield Currently unused
  */
@@ -642,6 +717,11 @@ function addCountWords() {
 
   });
 
+}
+function addMaxLength(){
+  document.querySelectorAll('[role="combobox"]').forEach(function (e) {
+    e.firstElementChild.setAttribute('maxlength', MAX_TAG_LENGTH);
+  });
 }
 
 /**
@@ -785,10 +865,9 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
   //for multi page support
   //this was added in newest update, so may be able to remove this in the future with additional configuration
   viewer.addHandler('page', function (){
-    ``
+
     //get rid of any annotations that may be open on the current page
     image_anno.cancelSelected();
-
 
     //remove all annotation on the viewer
     image_anno.clearAnnotations();
@@ -822,7 +901,7 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
   // window.location.hostname + "/modules/recogito_integration/recogito_integration_functions.php"
 
   //var page_url = window.location.pathname;
-
+ // !global_annos.includes(image_anno) && global_annos.push(image_anno);
   var page_url = '/node/' + node_num;
   jQuery.ajax({
     type: "GET",
@@ -840,8 +919,11 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
         if(w3c.type !== "Annotation" && viewer["tileSources"][0] == w3c["target"]["source"])
         {
           image_anno.addAnnotation(w3c);
+        //  global_annos.push(w3c);
         }
       }
+
+
     },
     error: function (xhr, status, error) {
       alert(xhr.responseText);
@@ -865,6 +947,7 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
           jQuery(".r6o-widget.r6o-tag").hide();
         }
       }, 25);
+      setTimeout(fixList, 25);
     }
 
   });
@@ -885,7 +968,7 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
 
     console.log(annotation);
     console.log(previous);
-    update_annotation(annotation, previous);
+    if (JSON.stringify(annotation) !== JSON.stringify(previous)) update_annotation(annotation, previous); //only update if there is actually a change (reduces unneccessary refresh)
   });
 
   image_anno.on('deleteAnnotation', function (annotation) {
@@ -963,7 +1046,8 @@ function highlightAnnotatedContent(a) {
     if (jQuery('.r6o-widget').length == comment_count + 2) { //Work once all comments have been loaded
       addAccessibilityLabel();
       //setTimeout(addCountWords, 25);
-      setTimeout(addCountableTag, 25);
+    //  setTimeout(addCountableTag, 25);
+      setTimeout(addMaxLength, 25);
 
       // Kyle added to have Admin user 's view (eg. /node/1) page has readonly mode only
       var readOnly = false;
