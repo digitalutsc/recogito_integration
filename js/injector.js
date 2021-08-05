@@ -149,7 +149,6 @@ function initSimpleImageAnnotation(image, perms, node_num){
       !perms['recogito delete annotations'] &&
       !perms['recogito edit own annotations'] &&
       !perms['recogito delete own annotations'])
-  // var imgElement = document.querySelector('img[loading="lazy"]');
   var imgElement = image;
   var anno = Annotorious.init({
     image: imgElement,
@@ -269,10 +268,11 @@ function awaitOpenSeadragonAnnotorious(perms)
   ids.forEach(function (element){
     temps.push(drupalSettings['openseadragon'][element]['options']);
     var temp = document.getElementById(element);
-    while (temp.getAttribute(target) == null){
+    while (temp !== null && temp.getAttribute(target) == null){
       temp = temp.parentElement;
     }
-    if (drupalSettings.recogito_integration.admin_view_mode){
+    if (temp == null) node_nums.push(window.location.pathname.split('/')[2]);
+    else if (temp !== null && drupalSettings.recogito_integration.admin_view_mode){
        if (temp.getAttribute(target).split('node/')[1] !== undefined)
        node_nums.push(temp.getAttribute(target).split('node/')[1].split('/')[0]);
     }else
@@ -399,7 +399,6 @@ function initTextAnnotation(perms) {
               cancelAllSelections();
               setTimeout(setDefaultTerm, 10);
              // console.log('highlighing');
-
               //setTimeout(addAccessibilityLabel, 10);
               return;
             }
@@ -467,6 +466,7 @@ function initTextAnnotation(perms) {
             /*console.log(previous);
             console.log(annotation);
             return;*/
+
             if (JSON.stringify(annotation) !== JSON.stringify(previous))
               update_annotation(annotation, previous);
           }
@@ -519,7 +519,6 @@ function initTextAnnotation(perms) {
       }
       text_anno.on('selectAnnotation', function (annotation) {
 
-
 //        resizeList();
         // TODO: check if there is preset configuration ready before intial Recogito JS annotation
         if (drupalSettings.recogito_integration.initial_setup){
@@ -557,7 +556,6 @@ function initTextAnnotation(perms) {
       });
 
       text_anno.on('createAnnotation', function (annotation) {
-        console.log('creating');
         if (default_term != -1) { // ignore when no default tag is selected
 
           // add a fix for 500 error when add diacritics (.ie: Öçè) to a comment or reply
@@ -594,8 +592,62 @@ function initTextAnnotation(perms) {
         else if (perms['recogito edit annotations'] === false)
           alert("Your annotation won't be saved because you don't have permission to update this annotation of this content.")
         else {
-          if (JSON.stringify(annotation) !== JSON.stringify(previous)) //only update if there is actually a change (reduces unneccessary refresh)
-            update_annotation(annotation, previous);
+          //console.log(Object.getOwnPropertyNames(recogito));
+
+        //  if (JSON.stringify(annotation) !== JSON.stringify(previous)) //only update if there is actually a change (reduces unneccessary refresh)
+      //    {
+            //delete_annotation(previous, working_node);
+            //create_annotation(annotation, working )
+          //  text_anno.removeAnnotation(annotation);
+            text_anno.removeAnnotation(previous);
+       //     update_annotation(annotation, previous);
+          page_url = '/node/' + working_node;
+          for (var i = 0; i < annotation.body.length; i++) {
+            annotation.body[i].value = encode_utf8(annotation.body[i].value);
+          }
+          var annotation_obj = convert_annotation_object(annotation);
+
+          jQuery.ajax({
+            type: "POST",
+            url: "/recogito_integration/create",
+            dataType: 'text',
+            headers: {
+              'pageurl': page_url,
+              'annotationobj': JSON.stringify(annotation_obj)
+            },
+
+            success: function (data) {
+              console.log(data);
+              console.log('created anno');
+              location.reload();
+            },
+            error: function (xhr, status, error) {
+              alert("Sorry, unable to create the annotation because of error: \n\n" + error);
+            }
+          });
+
+  /*          jQuery.ajax({
+              type: "GET",
+              url: "/recogito_integration/get",
+              dataType: 'json',
+              headers: {
+                'pageurl': page_url
+              },
+
+              success: function (data) {
+                for (annotation in data) {
+                  if (annotation == previous) continue;
+                  w3c = convert_annotation_w3c(data[annotation]);
+                //  text_anno.remove(w3c);
+                //  console.log('adding ' + JSON.stringify(w3c));
+                  text_anno.addAnnotation(w3c);
+                }
+              },
+              error: function (xhr, status, error) {
+                console.log(xhr.responseText);
+              }
+            });*/
+          //}
         }
       });
       text_anno.on('deleteAnnotation', function (annotation) {
@@ -809,6 +861,7 @@ function addAccessibilityLabel()
  * @param node_num : int the node to get the annotations for
  */
 function getAnnotations(recogito, node_num, readonly = false) {
+
 
   var page_url = window.location.pathname;
 
@@ -1188,7 +1241,11 @@ function update_annotation(annotation, previous) {
 
     success: function (data) {
       console.log(data);
-      location.reload();
+     // jQuery('.r6o-editor').load(document.URL +  ' .r6o-editor');
+     // location.reload();
+    //  getAnnotations(annotation);
+
+
     },
     error: function (xhr, status, error) {
       alert("Sorry, unable to update the annotation because of error: \n\n" + error);
