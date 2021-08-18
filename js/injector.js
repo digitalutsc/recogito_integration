@@ -3,7 +3,7 @@ const MAX_TAG_LENGTH = '150'
 jQuery(document).ready(function () {
   // kyle added to handle the issue View tab and Add/Edit Annotation have same URL
   if (window.location.search.includes('?mode=annotation')) {
-    jQuery("a.tabs__link").each(function (index) {
+    jQuery("ul.tabs li a").each(function (index) {
       if (jQuery(this).text().includes("View") && jQuery(this).attr("href").includes('?mode=annotation')) {
         $newurl = jQuery(this).attr("href").replace("?mode=annotation", "");
         jQuery(this).attr("href", $newurl);
@@ -137,6 +137,7 @@ function initSideBySide(perms, textInit = false){
     }
     var pages = 'field_page_ranges' in page_json ? page_json['field_page_ranges'][0]['value'].split('-') :
       page_json['field_page_range'][0]['value'].split('-');
+    var pages = page_json['field_page_ranges'][0]['value'].split('-')
     var low_bound = Number(pages[0]);
     var up_bound = Number(pages[pages.length - 1]);
     //return an array of pages starting at the lower and ending at upper bound
@@ -152,6 +153,7 @@ function initSideBySide(perms, textInit = false){
  * @param perms : assigned permission config
  */
 function initializeAdmin(perms){
+//<<<<<<< HEAD
   //setTimeout(highlightActive, 30);
   var transcript = initSideBySide(perms, true);
   // var articles = jQuery('article');
