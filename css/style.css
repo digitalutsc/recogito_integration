@@ -46,3 +46,6 @@
   user-select: none /* Non-prefixed version, currently
                                   supported by Chrome, Edge, Opera and Firefox */
 }
+/* .r6o-annotation{
+  background: red !important;
+} */

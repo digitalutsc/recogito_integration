@@ -23,7 +23,6 @@ class RecogitoIntegrationForm extends ConfigFormBase
   {
     $form = parent::buildForm($form, $form_state);
     $config = $this->config('recogito_integration.settings');
-
     // pull list of exsiting content types of the site
     $content_types = \Drupal::entityTypeManager()
       ->getStorage('node_type')
@@ -57,13 +56,64 @@ class RecogitoIntegrationForm extends ConfigFormBase
       ],
       '#default_value' => ($config->get('recogito_integration.custom_dom') !== null) ? $config->get('recogito_integration.custom_dom') : 0,
     ];
-
-
     // Wrap textfields in a container. This container will be replaced through
     // AJAX.
     $form['custom_mode_container'] = [
       '#type' => 'container',
       '#attributes' => ['id' => 'container-custom-mode'],
+    ];
+    $options_background_colours = ['red' => 'red', 'yellow' => 'yellow', 'purple' => 'purple'];
+/*     $form['background'] = [
+      '#type' => 'select',
+      '#title' => t('Background of annotated content'),
+      '#options' => $options_background_colours,
+      '#default_value' => ($config->get('recogito_integration.background') !== null) ? $config->get('recogito_integration.background') : [],
+      '#required' => true
+    ]; */
+    $text_colour_desc = 'The colour of the annotated text. If omitted, annotated text will be the 
+      same colour as un-annotated text.';
+    $form['text_colour'] = array(
+      '#type' => 'color',
+      '#title' => t('Annotated Text Colour'),
+      '#description' => t($text_colour_desc),
+      '#default_value' => ($config->get('recogito_integration.text_colour') !== null) ? $config->get('recogito_integration.text_colour') : 'black',
+    );
+    $form['background']= array(
+      '#type' => 'color',
+      '#title' => t('Annotation Background Colour'),
+      '#default_value' => ($config->get('recogito_integration.background') !== null) ? $config->get('recogito_integration.background') : [],
+    );
+    $form['background_transparency'] = array(
+      '#type' => 'number',
+      '#title' => t('Annotation Background Transparency'),
+      '#description' => t('Choose 0 to remove all background highlighting.'),
+      '#min' => 0,
+      '#max' => 1,
+      '#step' => 0.1,
+      '#default_value' => ($config->get('recogito_integration.background_transparency') !== null) ? $config->get('recogito_integration.background_transparency') : []
+    );
+    $form['underline_thickness'] = array(
+      '#type' => 'number',
+      '#title' => t('Annotation Underline Thickness (px)'),
+      '#description' => t('Choose 0 to omit any underlines.'),
+      '#min' => 0,
+      '#step' => 0.1,
+      '#default_value' => ($config->get('recogito_integration.underline_thickness') !== null) ? $config->get('recogito_integration.underline_thickness') : [],
+      '#required' => true
+    );
+    $form['underline_colour']= array(
+      '#type' => 'color',
+      '#title' => t('Annotation Underline Colour'),
+      '#default_value' => ($config->get('recogito_integration.underline_colour') !== null) ? $config->get('recogito_integration.underline_colour') : [],
+    );
+    $underline_style_options = ['dotted' => 'dotted', 'dashed' => 'dashed', 'solid' => 'solid', 
+    'double' => 'double', 'groove' => 'groove', 'ridge' => 'ridge', 'inset' => 'inset', 
+    'outset' => 'outset', 'none' => 'none'];
+    $form['underline_style'] = [
+      '#type' => 'select',
+      '#title' => t('Underline Style'),
+      '#options' => $underline_style_options,
+      '#default_value' => ($config->get('recogito_integration.underline_style') !== null) ? $config->get('recogito_integration.underline_style') : [],
     ];
 
     if (($form_state->getValue('custom-annotation', NULL) === null && $config->get('recogito_integration.custom_dom') !== null && $config->get('recogito_integration.custom_dom') === 1) || $form_state->getValue('custom-annotation', NULL) === 1) {
@@ -154,7 +204,6 @@ class RecogitoIntegrationForm extends ConfigFormBase
     $form['default_term_container']['default_term'] = [
       '#type' => 'container',
     ];
-
     if ($selected_vocalbulary != -1) {
       print_log($form_state->getValue('default_term'));
       $form['default_term_container']['default_term']['default_term'] = [
@@ -235,6 +284,12 @@ class RecogitoIntegrationForm extends ConfigFormBase
       $config->set('recogito_integration.attach_attribute_name', "");
     }
     $config->set('recogito_integration.content-type-to-annotated', $form_state->getValues()['select-content-types']);
+    $config->set('recogito_integration.text_colour', $form_state->getValue('text_colour'));
+    $config->set('recogito_integration.background', $form_state->getValue('background'));
+    $config->set('recogito_integration.underline_thickness', $form_state->getValue('underline_thickness'));
+    $config->set('recogito_integration.background_transparency', $form_state->getValue('background_transparency'));
+    $config->set('recogito_integration.underline_style', $form_state->getValue('underline_style'));
+    $config->set('recogito_integration.underline_colour', $form_state->getValue('underline_colour'));
     $config->set('recogito_integration.annotation_vocab_name', $form_state->getValue('annotation_vocab_name'));
     $config->set('recogito_integration.default_term', $form_state->getValue('default_term'));
     $config->save();

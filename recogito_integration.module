@@ -53,7 +53,13 @@ function recogito_integration_page_attachments(array &$attachments)
         (\Drupal::config('recogito_integration.settings') !== null
           && !empty(\Drupal::config('recogito_integration.settings')->get('recogito_integration.initialsetup')))
           ? \Drupal::config('recogito_integration.settings')->get('recogito_integration.initialsetup') : false;
-
+      
+      $attachments['#attached']['drupalSettings']['recogito_integration']['text_colour'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.text_colour');;    
+      $attachments['#attached']['drupalSettings']['recogito_integration']['background'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.background');;
+      $attachments['#attached']['drupalSettings']['recogito_integration']['underline_thickness'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.underline_thickness');;
+      $attachments['#attached']['drupalSettings']['recogito_integration']['underline_style'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.underline_style');;
+      $attachments['#attached']['drupalSettings']['recogito_integration']['underline_colour'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.underline_colour');;
+      $attachments['#attached']['drupalSettings']['recogito_integration']['background_transparency'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.background_transparency');;
       //$attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_type'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_type');
       if (\Drupal::config('recogito_integration.settings')->get('recogito_integration.custom_dom') === 1)
         $attachments['#attached']['drupalSettings']['recogito_integration']['annotation_range'] = (in_array($node->bundle(), array_filter(array_values($anno_contenttypes)))) ? "full" : 'limited';
