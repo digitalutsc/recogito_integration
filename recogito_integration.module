@@ -135,10 +135,10 @@ function recogito_integration_form_alter(&$form, \Drupal\Core\Form\FormStateInte
         $annotation_collection = array_values(getAnnotationCollection($node));
       }
       if (count($annotation_collection) > 0) {
-        if (str_starts_with($form_id, "node_") && endsWith($form_id, "_delete_form")) {
+        if (str_starts_with($form_id, "node_") && strEndsWith($form_id, "_delete_form")) {
 
           $form['description']['#markup'] = '<strong><u>Warning</u>:</strong> This page (or node) currently contains annotations. Deleting this node will also deleting the annotation which are associated with it. <strong>This action cannot be undone</strong>.';
-        } else if (str_starts_with($form_id, "node_") && endsWith($form_id, "_edit_form")) {// node_page_edit_form
+        } else if (str_starts_with($form_id, "node_") && strEndsWith($form_id, "_edit_form")) {// node_page_edit_form
           $msg = '\nIMPORTANT INFORMATION:\n\nThis page (or node) currently contains annotations. Updating this node may effect the existing annotation(s) which are associated with it.\n\nPlease double check on the existing annotation(s) of this page after updating it.';
 
           $form['actions']['submit'] = array(
@@ -161,7 +161,7 @@ function recogito_integration_form_alter(&$form, \Drupal\Core\Form\FormStateInte
 
 }
 
-function endsWith($haystack, $needle)
+function strEndsWith($haystack, $needle)
 {
   return $needle === "" || (substr($haystack, -strlen($needle)) === $needle);
 }
