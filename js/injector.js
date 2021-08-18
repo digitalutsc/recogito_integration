@@ -112,8 +112,9 @@ function initSideBySide(perms, textInit = false){
   for(i = 0; i < labels.length; i++)
     if (labels[i].innerHTML == 'Related Archival Object')
       break;
-  if (page_json['field_related_archival_object'] !== undefined && 
-    page_json['field_related_archival_object'].length)
+  if ((page_json['field_related_archival_object'] !== undefined && 
+    page_json['field_related_archival_object'].length) || (page_json['field_related_document'] !== undefined && 
+    page_json['field_related_document'].length))
   {
     //let node_num = labels[i].parentElement.children[1].children[0].getAttribute('href').split('/').slice(-1)[0];
     let node_num = page_json['field_related_archival_object'][0]['target_id'];
@@ -134,13 +135,14 @@ function initSideBySide(perms, textInit = false){
         } */
       }, 15);
     }
-    var pages = page_json['field_page_ranges'][0]['value'].split('-')
+    var pages = 'field_page_ranges' in page_json ? page_json['field_page_ranges'][0]['value'].split('-') :
+      page_json['field_page_range'][0]['value'].split('-');
     var low_bound = Number(pages[0]);
     var up_bound = Number(pages[pages.length - 1]);
     //return an array of pages starting at the lower and ending at upper bound
     return Array.from(new Array(up_bound - low_bound + 1), (x, i) => i + low_bound);
   }
-  else if (page_json['type'][0]['target_id'] == 'islandora_object')
+  else if (page_json['type'][0]['target_id'].endsWith('islandora_object'))
     return null; //islandora object w/o article view
   else return undefined; //non-islandora object content type
 }
@@ -150,7 +152,7 @@ function initSideBySide(perms, textInit = false){
  * @param perms : assigned permission config
  */
 function initializeAdmin(perms){
-  setTimeout(highlightActive, 30);
+  //setTimeout(highlightActive, 30);
   var transcript = initSideBySide(perms, true);
   // var articles = jQuery('article');
   var article_content = jQuery("article").find('.node__content');
