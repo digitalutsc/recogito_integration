@@ -20,7 +20,7 @@ function recogito_integration_page_attachments(array &$attachments)
     $anno_contenttypes = \Drupal::config('recogito_integration.settings')->get('recogito_integration.content-type-to-annotated');
 
     $custom_mode = \Drupal::config('recogito_integration.settings')->get('recogito_integration.custom_dom') === 1 && !empty(\Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name'));
-    if (isset($node) && (in_array($node->bundle(), array_filter(array_values($anno_contenttypes))) || $custom_mode === true)) {
+    if (gettype($node) != 'string' && isset($node) && (in_array($node->bundle(), array_filter(array_values($anno_contenttypes))) || $custom_mode === true)) {
       \Drupal::service('page_cache_kill_switch')->trigger();
       $vid = \Drupal::config('recogito_integration.settings')->get('recogito_integration.annotation_vocab_name');
       $terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vid);
