@@ -108,8 +108,6 @@ function initSideBySide(perms, textInit = false){
   JSON.parse(x.responseText).forEach(element => console.log(element.nid)); */
   var related_field = 'field_related_archival_object' in page_json ? 'field_related_archival_object' : 'field_related_document';
   var page_field = 'field_page_ranges' in page_json ? 'field_page_ranges' : 'field_page_range';
-  console.log('related field is ' + related_field);
-  console.log('page field is ' + page_field);
   if (page_json[related_field] !== undefined && 
     page_json[related_field].length)
   {
