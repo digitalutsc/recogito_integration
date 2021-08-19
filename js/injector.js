@@ -94,7 +94,6 @@ function cancelAllSelections(){
  */
 function initSideBySide(perms, textInit = false){
 
-  var labels = document.getElementsByClassName('field__label');
   var xmlHttp = new XMLHttpRequest();
   var url = window.location.origin + window.location.pathname + '?_format=json';
   xmlHttp.open( "GET", url, false ); // false for synchronous request
@@ -107,17 +106,14 @@ function initSideBySide(perms, textInit = false){
   x.send( null );
   console.log(JSON.parse(x.responseText));
   JSON.parse(x.responseText).forEach(element => console.log(element.nid)); */
-
-  var i;
-  for(i = 0; i < labels.length; i++)
-    if (labels[i].innerHTML == 'Related Archival Object')
-      break;
-  if ((page_json['field_related_archival_object'] !== undefined && 
-    page_json['field_related_archival_object'].length) || (page_json['field_related_document'] !== undefined && 
-    page_json['field_related_document'].length))
+  var related_field = 'field_related_archival_object' in page_json ? 'field_related_archival_object' : 'field_related_document';
+  var page_field = 'field_page_ranges' in page_json ? 'field_page_ranges' : 'field_page_range';
+  console.log('related field is ' + related_field);
+  console.log('page field is ' + page_field);
+  if (page_json[related_field] !== undefined && 
+    page_json[related_field].length)
   {
-    //let node_num = labels[i].parentElement.children[1].children[0].getAttribute('href').split('/').slice(-1)[0];
-    let node_num = page_json['field_related_archival_object'][0]['target_id'];
+    let node_num = page_json[related_field][0]['target_id'];
     if (textInit)
     {
       setTimeout(function(){
@@ -135,9 +131,7 @@ function initSideBySide(perms, textInit = false){
         } */
       }, 15);
     }
-    var pages = 'field_page_ranges' in page_json ? page_json['field_page_ranges'][0]['value'].split('-') :
-      page_json['field_page_range'][0]['value'].split('-');
-    var pages = page_json['field_page_ranges'][0]['value'].split('-')
+    var pages = page_json[page_field][0]['value'].split('-');
     var low_bound = Number(pages[0]);
     var up_bound = Number(pages[pages.length - 1]);
     //return an array of pages starting at the lower and ending at upper bound
