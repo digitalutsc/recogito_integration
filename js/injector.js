@@ -170,7 +170,8 @@ function initializeAdmin(perms){
         if (transcript === null){//repository item w/o transcript
           //initialize text annotations only for 'description field'
           var t = article_content[j].querySelector('[property="dcterms:description"]');
-          initTextAnnotation(perms, temp_num, t);
+          if(t !== null)
+            initTextAnnotation(perms, temp_num, t);
         }
         else if (transcript == null) //not a repository item
           initTextAnnotation(perms, temp_num, article_content[j]); //initialize text annotations for entire page
@@ -988,7 +989,7 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
     image_anno.clearAnnotations();
 
     //get node ID of page, if applicable
-    var page_url = node_num == undefined ? '/node/' + node_num : '/node/' + node_num[viewer.currentPage()];
+    var page_url = typeof node_num == 'string' ? '/node/' + node_num : '/node/' + node_num[viewer.currentPage()];
 
     //add annotations that belong to this page
     jQuery.ajax({
@@ -1017,7 +1018,7 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
   });
 
   //get node ID of page, if applicable
-  var page_url = node_num == undefined ? '/node/' + node_num : '/node/' + node_num[viewer.currentPage()];
+  var page_url = typeof node_num == 'string' ? '/node/' + node_num : '/node/' + node_num[viewer.currentPage()];
   jQuery.ajax({
     type: "GET",
     url: "/recogito_integration/get",
@@ -1070,7 +1071,7 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
       annotation.body[i].value = encode_utf8(annotation.body[i].value);
     }
 
-    if (node_num.length == undefined) //all pages belong to the same node
+    if (typeof node_num == 'string') //all pages belong to the same node
     {  
       create_annotation(annotation, node_num, viewer.currentPage());
       var parent = getParentNode(node_num);
@@ -1272,7 +1273,7 @@ function create_annotation(a, /*, node_num*/) {
       location.reload();
     },
     error: function (xhr, status, error) {
-      alert("Sorry, unable to create the annotation because of error: \n\n" + error);
+      error == '' ? location.reload() : alert("Sorry, unable to create the annotation because of error: \n\n" + error);
     }
   });
 
