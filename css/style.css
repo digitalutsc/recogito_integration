@@ -46,6 +46,10 @@
   user-select: none /* Non-prefixed version, currently
                                   supported by Chrome, Edge, Opera and Firefox */
 }
-/* .r6o-annotation{
-  background: red !important;
-} */
+/*Resolves issue of annotations hidden by media*/
+.contextual-region.media.media--type-image{
+  overflow: visible !important;
+}
+.media.media--type-image{
+  overflow: visible !important;
+}

@@ -222,8 +222,14 @@ function initializeNonAdmin(perms){
         temp_num = q.getAttribute('data-history-node-id');
       }
       if (temp_num !== null){
-        if (transcript == null)//if there is a transcript, do not allow any other content to be annotatable
-          initTextAnnotation(perms, temp_num, article_content[j]);
+        if (transcript === null){//repository item w/o transcript
+          //initialize text annotations only for 'description field'
+          var t = article_content[j].querySelector('[property="dcterms:description"]');
+          if(t !== null)
+            initTextAnnotation(perms, temp_num, t);
+        }
+        else if (transcript == null) //not a repository item
+          initTextAnnotation(perms, temp_num, article_content[j]); //initialize text annotations for entire page
         var imgs = article_content[j].getElementsByTagName('img');
         for (var p = 0; p < imgs.length; p++) {
           initSimpleImageAnnotation(imgs[p], perms, temp_num);
@@ -1005,9 +1011,13 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
         for (annotation in data) {
           w3c = convert_annotation_w3c(data[annotation]);
           //make sure this annotation belongs here
-          if(w3c.type !== "Annotation" && viewer["tileSources"][viewer.currentPage()] == w3c["target"]["source"])
+
+          if(w3c.type !== "Annotation")// && viewer["tileSources"][viewer.currentPage()] == w3c["target"]["source"])
           {
-            image_anno.addAnnotation(w3c);
+            let b = Math.max(viewer["tileSources"][viewer.currentPage()] == w3c["target"]["source"], viewer["tileSources"][viewer.currentPage()].replaceAll('https', 'http')
+               == w3c["target"]["source"].replaceAll('https', 'http'));
+            if(b)
+              image_anno.addAnnotation(w3c);
           }
         }
       },
@@ -1032,9 +1042,12 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
       for (annotation in data) {
         w3c = convert_annotation_w3c(data[annotation]);
         //make sure this annotation belongs here
-        if(w3c.type !== "Annotation" && viewer["tileSources"][0] == w3c["target"]["source"])
+        if(w3c.type !== "Annotation")// && viewer["tileSources"][0] == w3c["target"]["source"])
         {
-          image_anno.addAnnotation(w3c);
+          let b = Math.max(viewer["tileSources"][0] == w3c["target"]["source"], viewer["tileSources"][0].replaceAll('https', 'http') == 
+            w3c["target"]["source"].replaceAll('https', 'http'))
+          if (b)
+            image_anno.addAnnotation(w3c);
         }
       }
 
@@ -1436,4 +1449,3 @@ function convert_annotation_w3c(annotation_object) {
 
   return annotation_w3c;
 }
-
