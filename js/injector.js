@@ -468,7 +468,7 @@ function initTextAnnotation(perms) {
 
   // Kyle added: special usecase : if Custom DOM mode is on, look and highlight and enable annotation for that DOM only
   var attach_element = [-1];
-  if (0){//range === "limited" && customAttributeName.length > 0) {
+  if (range === "limited" && customAttributeName.length > 0) {
     attach_element = [];
     for (var j = 0; j < customAttributeName.length; j++) {
       var element = jQuery(customAttributeName[j]);
@@ -491,7 +491,7 @@ function initTextAnnotation(perms) {
   else {
     // change background for annotated area:
     //if (window.location.search == "?mode=annotation") {
-    if (window.location.search.includes("?mode=annotation")){
+    if (window.location.search.includes("?mode=annotation") && perms['recogito edit annotations']){
       //jQuery("article > div.node__content").css('background-color', '#dfeaff');
       //changed by John
       arguments[2].style.backgroundColor = '#dfeaff'; //change background of annotatable content
@@ -532,7 +532,6 @@ function initTextAnnotation(perms) {
         }
 
         text_anno.on('selectAnnotation', function (annotation) {
-
           // TODO: check if there is preset configuration ready before intial Recogito JS annotation
           if (drupalSettings.recogito_integration.initial_setup){
             highlightAnnotatedContent(annotation);
@@ -641,11 +640,25 @@ function initTextAnnotation(perms) {
         });
       }
       text_anno.on('selectAnnotation', function (annotation) {
-
+        //remove tag list if empty and not editing
+        if(!window.location.search.includes("?mode=annotation") || !perms['recogito edit annotations']){
+          setTimeout(function (){
+          var tagList = jQuery('.r6o-widget.r6o-tag');
+          for (let y = 0; y < tagList.length; y++){
+           console.log(tagList[y].innerText);
+           if (tagList[y].innerText == '') {
+             tagList[y].remove();
+           }
+          } 
+        }, 40);
+      }
 //        resizeList();
         // TODO: check if there is preset configuration ready before intial Recogito JS annotation
         if (drupalSettings.recogito_integration.initial_setup){
-          window.location.search.includes("?mode=annotation") && setTimeout(addDeleteButton, 30, annotation, text_anno);
+          if (perms['recogito delete annotations'] && window.location.search.includes("?mode=annotation")) {
+            setTimeout(addDeleteButton, 30, annotation, text_anno);
+          }
+         // window.location.search.includes("?mode=annotation") && setTimeout(addDeleteButton, 30, annotation, text_anno);
           highlightAnnotatedContent(annotation);
           if (text_anno.readOnly == undefined || !text_anno.readOnly) {
             setTimeout(addAccessibilityLabel, 15);
