@@ -1,5 +1,6 @@
 var global_annos = []
 const MAX_TAG_LENGTH = '150'
+var global_node;
 jQuery(document).ready(function () {
   // kyle added to handle the issue View tab and Add/Edit Annotation have same URL
   if (window.location.search.includes('?mode=annotation')) {
@@ -13,6 +14,7 @@ jQuery(document).ready(function () {
     });
   }
   annotationStyling();
+  addSnackBar();
   var can_read_annotations = false;
   var perms = drupalSettings.recogito_integration.permissions;
   if (perms['recogito view annotations'] && !window.location.pathname.includes('recogito_integration')) {
@@ -27,6 +29,12 @@ jQuery(document).ready(function () {
       initializeNonAdmin(perms);
   }
 });
+function addSnackBar(){
+  var newDiv = document.createElement('div');
+  newDiv.setAttribute('id', 'snackbar');
+  newDiv.setAttribute('innerHTML', 'updating annotation');
+  document.body.appendChild(newDiv);
+}
 /**
  * Converts a hexadecimal color code into the corresponding RGBA string. 
  * Credit:  https://stackoverflow.com/a/21648508
@@ -108,6 +116,7 @@ function initSideBySide(perms, textInit = false){
   JSON.parse(x.responseText).forEach(element => console.log(element.nid)); */
   var related_field = 'field_related_archival_object' in page_json ? 'field_related_archival_object' : 'field_related_document';
   var page_field = 'field_page_ranges' in page_json ? 'field_page_ranges' : 'field_page_range';
+  global_node =  page_json['nid'][0]['value'];
   if (page_json[related_field] !== undefined && 
     page_json[related_field].length)
   {
@@ -169,7 +178,8 @@ function initializeAdmin(perms){
         //if (article_content[j].getElementsByTagName('p').length !== 0) 
         if (transcript === null){//repository item w/o transcript
           //initialize text annotations only for 'description field'
-          var t = article_content[j].querySelector('[property="dcterms:description"]');
+     //     var t = article_content[j].querySelector('[property="dcterms:description"]');
+          var t= jQuery('.node__content')[0];
           if(t !== null)
             initTextAnnotation(perms, temp_num, t);
         }
@@ -224,7 +234,8 @@ function initializeNonAdmin(perms){
       if (temp_num !== null){
         if (transcript === null){//repository item w/o transcript
           //initialize text annotations only for 'description field'
-          var t = article_content[j].querySelector('[property="dcterms:description"]');
+          //var t = article_content[j].querySelector('[property="dcterms:description"]');
+          var t= jQuery('.node__content')[0];
           if(t !== null)
             initTextAnnotation(perms, temp_num, t);
         }
@@ -421,6 +432,14 @@ function getParentNode(node_num){
     return page_json['field_part_of'][0]['target_id'];
   else return null;
 }
+
+function showSnackBar(text){
+  var x = document.getElementById("snackbar");
+  //x.append(text);
+  x.textContent = text;
+  x.className = "show";
+  setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
+}
 /**
  * Setup annotation for text
  * @param perms : assigned permission config
@@ -435,7 +454,7 @@ function initTextAnnotation(perms) {
       !perms['recogito edit annotations'] &&
       !perms['recogito delete annotations'] &&
       !perms['recogito edit own annotations'] &&
-      !perms['recogito delete own annotations'])
+      !perms['recogito delete own annotations']);
 
   // When in View mode (View tab is active), Show annotation in readonly
   /* if (readOnly || !window.location.search.includes('?mode=annotation')) {
@@ -501,7 +520,6 @@ function initTextAnnotation(perms) {
 
   // check  annotation are allow to be enable for DOM or content type. If not, display warning
   if (attach_element[0] !== -1 ) {
-
     // need [0] because selector returns an array instead of object
     if (arguments.length !== 3){
       for (var i = 0; i < attach_element.length; i++) {
@@ -570,6 +588,9 @@ function initTextAnnotation(perms) {
               type: tmp.type,
               value: default_term,
             });
+            for (var i = 0; i < annotation.body.length; i++) {
+              annotation.body[i].value = encode_utf8(annotation.body[i].value);
+            }
           }
           // TODO: check if there is preset configuration ready before intial Recogito JS annotation
           if (drupalSettings.recogito_integration.initial_setup === false)
@@ -607,7 +628,7 @@ function initTextAnnotation(perms) {
       }
     }
     else{
-      var working_node = arguments[1];
+      var working_node = arguments[1] == undefined ? global_node : arguments[1];
       var text_anno = Recogito.init({
         content: arguments[2], // Element id or DOM node to attach to
         allowEmpty: false,  //changed to false by John
@@ -625,7 +646,8 @@ function initTextAnnotation(perms) {
       // check with John
       //getAnnotations(text_anno);
       // set default term (if applicable) as default tag
-      getAnnotations(text_anno, arguments[1]);
+      //getAnnotations(text_anno, arguments[1]);
+      getAnnotations(text_anno, working_node);
       if (default_term != -1) { // ignore when no default tag is selected
         jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
           if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
@@ -645,7 +667,6 @@ function initTextAnnotation(perms) {
           setTimeout(function (){
           var tagList = jQuery('.r6o-widget.r6o-tag');
           for (let y = 0; y < tagList.length; y++){
-           console.log(tagList[y].innerText);
            if (tagList[y].innerText == '') {
              tagList[y].remove();
            }
@@ -693,12 +714,11 @@ function initTextAnnotation(perms) {
 
       text_anno.on('createAnnotation', function (annotation) {
         if (default_term != -1) { // ignore when no default tag is selected
-
           // add a fix for 500 error when add diacritics (.ie: Öçè) to a comment or reply
           //annotation.body[0].value = encode_utf8(annotation.body[0].value);
-          for (var i = 0; i < annotation.body.length; i++) {
+          /*for (var i = 0; i < annotation.body.length; i++) {
             annotation.body[i].value = encode_utf8(annotation.body[i].value);
-          }
+          }*/
 
           // set "footnote" as default vocabulary
           var tmp = annotation.body[0];
@@ -1281,6 +1301,18 @@ function highlightAnnotatedContent(a) {
  */
 function create_annotation(a, /*, node_num*/) {
   var page_url;
+  var targetType = a['target']['selector']['type'] == undefined ? 
+    a['target']['selector'][0]['type'] : a['target']['selector']['type'];
+  var containsDiacritics = false;
+  // add a fix for 500 error when update annotation with diacritics (.ie: Öçè) in any text field.
+  for (var i = 0; i < a.body.length; i++) {
+    let pre = a.body[i].value;
+    let post = encode_utf8(a.body[i].value); //need this if text anno 
+    if (targetType == 'TextQuoteSelector') {
+      a.body[i].value = post;
+    }
+    if (pre != post) containsDiacritics = true;
+  }
   var annotation_obj = convert_annotation_object(a);
   
   // check with John
@@ -1296,7 +1328,8 @@ function create_annotation(a, /*, node_num*/) {
 
     success: function (data) {
       console.log(data);
-      location.reload();
+      if (containsDiacritics) location.reload();
+      else showSnackBar('Annotation Saved');
     },
     error: function (xhr, status, error) {
       error == '' ? location.reload() : alert("Sorry, unable to create the annotation because of error: \n\n" + error);
@@ -1313,9 +1346,12 @@ function create_annotation(a, /*, node_num*/) {
  * @param previous
  */
 function update_annotation(annotation, previous) {
+  var containsDiacritics = false;
   // add a fix for 500 error when update annotation with diacritics (.ie: Öçè) in any text field.
   for (var i = 0; i < annotation.body.length; i++) {
+    let pre = annotation.body[i].value;
     annotation.body[i].value = encode_utf8(annotation.body[i].value);
+    if (pre != annotation.body[i].value) containsDiacritics = true;
   }
 
   var annotation_obj = convert_annotation_object(annotation);
@@ -1329,8 +1365,10 @@ function update_annotation(annotation, previous) {
 
     success: function (data) {
       console.log(data);
-      location.reload();
-    //  getAnnotations(annotation);
+      if (containsDiacritics){
+        location.reload();
+      } 
+      else showSnackBar('Annotation Updated');
     },
     error: function (xhr, status, error) {
       alert("Sorry, unable to update the annotation because of error: \n\n" + error);
@@ -1361,7 +1399,8 @@ function delete_annotation(annotation) {
 
     success: function (data) {
       console.log(data);
-      location.reload();
+      showSnackBar('Annotation Deleted');
+      //location.reload();
     },
     error: function (xhr, status, error) {
       //xhr.responseText
