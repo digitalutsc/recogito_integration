@@ -60,6 +60,8 @@ function recogito_integration_page_attachments(array &$attachments)
       $attachments['#attached']['drupalSettings']['recogito_integration']['underline_style'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.underline_style');;
       $attachments['#attached']['drupalSettings']['recogito_integration']['underline_colour'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.underline_colour');;
       $attachments['#attached']['drupalSettings']['recogito_integration']['background_transparency'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.background_transparency');;
+      $attachments['#attached']['drupalSettings']['recogito_integration']['select_anno_fields'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.fields_to_annotate');;
+
       //$attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_type'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_type');
       if (\Drupal::config('recogito_integration.settings')->get('recogito_integration.custom_dom') === 1)
         $attachments['#attached']['drupalSettings']['recogito_integration']['annotation_range'] = (in_array($node->bundle(), array_filter(array_values($anno_contenttypes)))) ? "full" : 'limited';

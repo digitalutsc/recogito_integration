@@ -28,6 +28,7 @@ class RecogitoIntegrationForm extends ConfigFormBase
       ->getStorage('node_type')
       ->loadMultiple();
     $options_contentypes = array();
+        
     foreach ($content_types as $ct) {
       if (!in_array($ct->id(), ['annotation_collection', 'annotation', 'annotation_textualbody'])) {
         $options_contentypes[$ct->id()] = $ct->label();
@@ -62,6 +63,14 @@ class RecogitoIntegrationForm extends ConfigFormBase
       '#type' => 'container',
       '#attributes' => ['id' => 'container-custom-mode'],
     ];
+    $anno_field_options = ['extent' => 'extent', 'rights' => 'rights', 'description' => 'description'];
+    $form['select_anno_fields'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('Annotatable Fields'),
+      '#options' => $anno_field_options,
+      '#default_value' => ($config->get('recogito_integration.fields_to_annotate') !== null) ? array_keys(array_filter($config->get('recogito_integration.fields_to_annotate'))) : [],
+      '#required' => true,
+    );
     $options_background_colours = ['red' => 'red', 'yellow' => 'yellow', 'purple' => 'purple'];
 /*     $form['background'] = [
       '#type' => 'select',
@@ -283,6 +292,7 @@ class RecogitoIntegrationForm extends ConfigFormBase
     if ($form_state->getValues()['custom-annotation'] === 0) {
       $config->set('recogito_integration.attach_attribute_name', "");
     }
+    $config->set('recogito_integration.fields_to_annotate', $form_state->getValues()['select_anno_fields']);
     $config->set('recogito_integration.content-type-to-annotated', $form_state->getValues()['select-content-types']);
     $config->set('recogito_integration.text_colour', $form_state->getValue('text_colour'));
     $config->set('recogito_integration.background', $form_state->getValue('background'));
