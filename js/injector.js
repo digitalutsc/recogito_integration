@@ -23,11 +23,8 @@ jQuery(document).ready(function () {
     if(jQuery('.openseadragon-canvas').length > 0){ //check for OpenSeadragon
       setTimeout(awaitOpenSeadragonAnnotorious, 300, perms);
     }
-    //need to seperate this!!
-    if (drupalSettings.recogito_integration.admin_view_mode)
-      initializeAdmin(perms);
-    else
-      initializeNonAdmin(perms);
+    //if (drupalSettings.recogito_integration.admin_view_mode)
+    initializeAll(perms);
   }
 });
 function addSnackBar(){
@@ -142,13 +139,17 @@ function initSideBySide(perms, textInit = false){
     var pages = page_json[page_field][0]['value'].split('-');
     var low_bound = Number(pages[0]);
     var up_bound = Number(pages[pages.length - 1]);
-    //return an array of pages starting at the lower and ending at upper bound
+    //return an array of page numbers starting at the lower and ending at upper bound
     return Array.from(new Array(up_bound - low_bound + 1), (x, i) => i + low_bound);
   }
   else if (page_json['type'][0]['target_id'].endsWith('islandora_object'))
     return null; //islandora object w/o article view
   else return undefined; //non-islandora object content type
 }
+/**
+ * Pause execution of the script for 'milliseconds' milliseconds
+ * @param {time} milliseconds : # of milliseconds to sleep
+ */
 function sleep(milliseconds) {
   const date = Date.now();
   let currentDate = null;
@@ -157,10 +158,10 @@ function sleep(milliseconds) {
   } while (currentDate - date < milliseconds);
 }
 /**
- * initialize annotations for Admin
+ * Handles and initializes all annotations on the page
  * @param perms : assigned permission config
  */
-function initializeAdmin(perms){
+function initializeAll(perms){
 //<<<<<<< HEAD
   //setTimeout(highlightActive, 30);
   var transcript = initSideBySide(perms, true);
@@ -179,64 +180,62 @@ function initializeAdmin(perms){
   }
   else{
     for(var j = 0; j < article_content.length; j++){
-      var temp_num = article_content[j].innerHTML.split('node/')[1].split('/')[0]; //get the node to which the current content belongs
-      //if (articles[j].getAttribute('data-history-node-id')
+     // var temp_num = article_content[j].innerHTML.split('node/')[1].split('/')[0]; //get the node to which the current content belongs
+      var temp_num = window.location.pathname.split('/')[2];
       if (temp_num !== null){
-        //if (article_content[j].getElementsByTagName('p').length !== 0) 
         if (transcript === null){//repository item w/o transcript
-          //initialize text annotations only for 'description field'
-     //     var t = article_content[j].querySelector('[property="dcterms:description"]');
           var t= jQuery('.node__content')[0];
-         // initTextAnnotation(perms, temp_num, article_content[j]);
+          var selected = article_content[j].getElementsByClassName('field__label');
+          var lablelToIndex = {};
+          for (label in selected){
+            let inner = selected[label].innerHTML;
+            if(inner != undefined)lablelToIndex[inner] = label;
+          }
           for (field in drupalSettings.recogito_integration.select_anno_fields){
             if (drupalSettings.recogito_integration.select_anno_fields[field] != 0) {
               let property = 'dcterms:' + field;
-              var t = article_content[j].querySelector(`[property="${property}"]`);
-              let arg = [];
-              arg.push(drupalSettings.recogito_integration.select_anno_fields[field]);
-              console.log('arg[0] is ' + arg[0]);
-              arg.push(t);
-              if (t!=null){// && field == 'extent') {
+              //var selected = article_content[j].querySelectorAll(`[property="${property}"]`);
+              if (selected[lablelToIndex[field]]!=null){
+                let arg = new Array(drupalSettings.recogito_integration.select_anno_fields[field], 
+                  selected[lablelToIndex[field]].nextElementSibling);
                 initTextAnnotation(perms, temp_num, arg);
               }
             }
           }
-          /*if(t !== null)
-            initTextAnnotation(perms, temp_num, t);*/
         }
         else if (transcript == null){ //not a repository item
           let customAttributeName = drupalSettings.recogito_integration.attach_attribute_name;
+          if (!customAttributeName[0].length) { 
+            //if no custom element is specified, use the main node content 
+            let arg = [];
+            arg.push('main');
+            arg.push(article_content[j]);
+            initTextAnnotation(perms, temp_num, arg);
+          }
           let range = drupalSettings.recogito_integration.annotation_range;
           for (let index = 0; index < customAttributeName.length; index++) {
             if (customAttributeName[index].startsWith('#')) {//id
               let id = customAttributeName[index].split('#')[1];
-              console.log('result of search');
-              sleep(750); //allow elements to load
-              var search = document.querySelector('[id="' + id + '"]');
+              sleep(50); //allow elements to load
+              var search = jQuery(customAttributeName[index])[0];//document.getElementById(id);//querySelector('[id="' + id + '"]');;
               if (search != undefined) {
                 let elem = search;
                 let arg = new Array(id, elem);
-                console.log('initializing text annos for ' + id);
                 if (elem != undefined)
                   initTextAnnotation(perms, temp_num, arg);
               }
             }
             else if(customAttributeName[index].startsWith('.')){//class
-              if (article_content[j].getElementsByClassName(customAttributeName[index]).length) {
-                let className = customAttributeName[index].split('.')[1];
-                let elem = article_content[j].getElementsByClassName(className)[0]; //get first one for now
-                if (elem != undefined)
-                  initTextAnnotation(perms, temp_num, [elem, className]);
+              let className = customAttributeName[index].split('.')[1].replaceAll(' ', '.');
+              sleep(50); //allow elements to load
+              let elem = jQuery(customAttributeName[index].replaceAll(' ', '.'));//article_content[j].getElementsByClassName(className)[0];
+              for (let e = 0; e < elem.length; e++){
+                let arg = new Array(className, elem[e]);
+                if (elem[e] != undefined)
+                  initTextAnnotation(perms, temp_num, arg);
               }
-            }
-            //initTextAnnotation(perms, temp_num, ar)
-            
+            }            
           }
-          if (range === 'limited' && customAttributeName.length > 0) {
-            console.log(customAttributeName);
-          }
-          //check for custom 
-        //  initTextAnnotation(perms, temp_num, article_content[j]); //initialize text annotations for entire page
         }
         var imgs = article_content[j].getElementsByTagName('img');
         for (var p = 0; p < imgs.length; p++) {
@@ -394,15 +393,12 @@ function initSimpleImageAnnotation(image, perms, node_num){
     // check with John
     //create_annotation(annotation);
     if (!curr_node)
-      create_annotation(annotation, node_num);
+      create_annotation(undefined, annotation, node_num);
     else
-      create_annotation(annotation);
+      create_annotation(undefined, annotation, node_num);
   });
 
   anno.on('updateAnnotation', function (annotation, previous) {
-
-    console.log(annotation);
-    console.log(previous);
     if (JSON.stringify(annotation) !== JSON.stringify(previous)) update_annotation(annotation, previous); //only update if there is actually a change (reduces unneccessary refresh)
   });
 
@@ -474,6 +470,11 @@ function awaitOpenSeadragonAnnotorious(perms)
     viewers.forEach((element, index) => initOpenSeadragonAnnnotation(element, perms, node_nums[index]));
   }
 }
+/**
+ * Gets the node ID of the parent (book container) of a page node
+ * @param {number} node_num : the node ID of the page
+ * @returns the node ID of the parent of the page or null if the node is not a page
+ */
 function getParentNode(node_num){
   var xmlHttp = new XMLHttpRequest();
   var url = window.location.origin + '/node/' + node_num + '?_format=json';//window.location.pathname + '?_format=json';
@@ -484,7 +485,10 @@ function getParentNode(node_num){
     return page_json['field_part_of'][0]['target_id'];
   else return null;
 }
-
+/**
+ * Temporarily shows the snackbar with the specified text
+ * @param {string} text : The text that will appear in the snackbar
+ */
 function showSnackBar(text){
   var x = document.getElementById("snackbar");
   //x.append(text);
@@ -495,8 +499,10 @@ function showSnackBar(text){
 /**
  * Setup annotation for text
  * @param perms : assigned permission config
+ * @param {number} [node_num] : the node ID for which annotations are being initialized
+ * @param {Array} [element_info] : an array contained the HTML element being annotated and a label for that element
  */
-function initTextAnnotation(perms) {
+function initTextAnnotation(perms/*, node_num, element_info */) {
   var anno_element = arguments[2];
   var user_data = drupalSettings.recogito_integration.user_data;
   var customAttributeName = drupalSettings.recogito_integration.attach_attribute_name;
@@ -566,8 +572,7 @@ function initTextAnnotation(perms) {
     if (window.location.search.includes("?mode=annotation") && perms['recogito edit annotations']){
       //jQuery("article > div.node__content").css('background-color', '#dfeaff');
       //changed by John
-      console.log(arguments[2]);
-      arguments[2][1].style.backgroundColor = '#dfeaff'; //change background of annotatable content
+     arguments[2][1].style.backgroundColor = '#dfeaff'; //change background of annotatable content
     }
     var attach_element = jQuery("article > div.node__content");
   }
@@ -1016,7 +1021,7 @@ function addAccessibilityLabel()
 
 /**
  * Ajax call to get list of annotation base on node url
- *
+ * @param element : an array containing the annotated element and a label for that element
  * @param recogito
  * @param node_num : int the node to get the annotations for
  */
@@ -1025,9 +1030,10 @@ function getAnnotations(element, recogito, node_num, readonly = false) {
   if (typeof node_num !== "boolean" && //make sure a node number is actually being used
       node_num !== window.location.pathname.split('/')[2]) page_url = '/node/' + node_num;//construct the URL is necessary
   if (element != undefined) {
-    page_url = page_url + '_' + element[0];
+    //add the element label to the page url (allows for annotating multple elements independently)
+    page_url = page_url + '/' + element[0].replaceAll('_', '/').replaceAll('-', '/').replaceAll('.', '/');
   }
-  console.log('getting annotations for ' + page_url);
+  page_url = page_url.replace(/\/{2,}/g, '/'); //prevent consecutive backslashes
   jQuery.ajax({
     type: "GET",
     url: "/recogito_integration/get",
@@ -1121,7 +1127,6 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
 
   //get node ID of page, if applicable
   var page_url = typeof node_num == 'string' ? '/node/' + node_num : '/node/' + node_num[viewer.currentPage()];
-  console.log('getting annotations from url: ' + page_url);
   jQuery.ajax({
     type: "GET",
     url: "/recogito_integration/get",
@@ -1179,7 +1184,6 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
 
     if (typeof node_num == 'string') //all pages belong to the same node
     {  
-      console.log('a');
       create_annotation(undefined, annotation, node_num, viewer.currentPage());
       var parent = getParentNode(node_num);
       if (parent !== null && !viewer.currentPage()) {
@@ -1188,7 +1192,6 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
     }
     else //each page has a different node ID
     {  
-      console.log('b');
       create_annotation(undefined, annotation, node_num[viewer.currentPage()], viewer.currentPage()); //add the annotation to the page's node
       /* var parent = getParentNode(node_num[0]);
       if (parent !== null && !viewer.currentPage()) { //if page belongs to a book and this is the first page, add anno to book as well
@@ -1357,13 +1360,12 @@ function highlightAnnotatedContent(a) {
 
 /**
  * Create an annotation within Drupal, given W3C data
- *
+ * @param element : an array containg the annotated element and a label for that element
  * @param a
  * @param node_num : int the on which the annotation is created
  */
 function create_annotation(element, a, /*, node_num*/) {
   var page_url;
-  console.log(arguments);
   var targetType = a['target']['selector']['type'] == undefined ? 
     a['target']['selector'][0]['type'] : a['target']['selector']['type'];
   var containsDiacritics = false;
@@ -1374,15 +1376,17 @@ function create_annotation(element, a, /*, node_num*/) {
     if (targetType == 'TextQuoteSelector') {
       a.body[i].value = post;
     }
-    if (pre != post) containsDiacritics = true;
+    if (pre != post) containsDiacritics = true; //check for diacritics
   }
   var annotation_obj = convert_annotation_object(a);
   // check with John
   arguments.length >= 2 ? page_url = '/node/' + arguments[2] : page_url = window.location.pathname;
-  if (element != undefined) {
-    page_url = page_url + '_' + element[0];
+   if (element != undefined) {
+    //add label to the page url (allows for annotating multiple elements independently)
+    page_url = page_url + '/' + element[0].replaceAll('_', '/').replaceAll('-', '/').replaceAll('.', '/');
   }
-  console.log('creating annotation at url: ' + page_url);
+  page_url = page_url.replace(/\/{2,}/g, '/'); //prevent consecutive backslashes
+
   jQuery.ajax({
     type: "POST",
     url: "/recogito_integration/create",
@@ -1453,8 +1457,6 @@ function delete_annotation(annotation) {
     //empty out contents before deleting to avoid issues with diacritics
     annotation_obj['textualbodies'][i]['value'] = '';
   }
-
-  console.log(annotation_obj);
   jQuery.ajax({
     type: "DELETE",
     url: "/recogito_integration/delete",

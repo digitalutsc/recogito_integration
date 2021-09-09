@@ -36,12 +36,12 @@ class RecogitoIntegrationForm extends ConfigFormBase
     }
 
     $form['set-permission'] = array(
-      '#markup' => $this->t("<p><strong>For permission, please configure which user(s) can create, update, and delete annotation for content at <a href='/admin/people/permissions'>here</a></strong>.</p>")
+      '#markup' => $this->t("<p><strong>For permission, please configure which user(s) can create, update, and delete annotation for content <a href='/admin/people/permissions'>here</a></strong>.</p>")
     );
 
     $form['select-content-types'] = array(
       '#type' => 'checkboxes',
-      '#title' => t('Which content type(s) to be annotated:'),
+      '#title' => t('Content type(s) to be annotated:'),
       '#options' => $options_contentypes,
       '#default_value' => ($config->get('recogito_integration.content-type-to-annotated') !== null) ? array_keys(array_filter($config->get('recogito_integration.content-type-to-annotated'))) : [],
       '#required' => true,
@@ -63,10 +63,13 @@ class RecogitoIntegrationForm extends ConfigFormBase
       '#type' => 'container',
       '#attributes' => ['id' => 'container-custom-mode'],
     ];
-    $anno_field_options = ['extent' => 'extent', 'rights' => 'rights', 'description' => 'description'];
+    $anno_field_options = ['Extent' => 'Extent', 'Rights' => 'Rights', 
+    'Description' => 'Description', 'Genre' => 'Genre', 'Table Of Contents' => 'Table Of Contents',
+      'Place Published' => 'Place Published', 'Language' => 'Language', 'Physical Form' => 'Physical Form',
+    'Geographic Subject' => 'Geographic Subject', 'Date' => 'Date'];
     $form['select_anno_fields'] = array(
       '#type' => 'checkboxes',
-      '#title' => t('Annotatable Fields'),
+      '#title' => t('Annotatable Fields (for repository items)'),
       '#options' => $anno_field_options,
       '#default_value' => ($config->get('recogito_integration.fields_to_annotate') !== null) ? array_keys(array_filter($config->get('recogito_integration.fields_to_annotate'))) : [],
       '#required' => true,
