@@ -102,3 +102,23 @@
   from {bottom: 30px; opacity: 0.85;}
   to {bottom: 0; opacity: 0;}
 }
+/* CSS for toggle, done externally
+.toggle-transcription.edit{
+  position: relative!important;
+  top: -48px!important;
+  left: 85px !important;
+  height: 34px !important;
+  border-style: none!important;
+  border-radius: 4px!important;
+}
+.toggle-transcription.edit:hover{
+  color:black!important;
+}
+.toggle-transcription.view{
+  height: 32px !important;
+  border-style: none!important;
+  border-radius: 4px!important;
+}
+.toggle-transcription.view:hover{
+  color:black!important;
+}*/

@@ -91,6 +91,52 @@ function cancelAllSelections(){
     if(global_annos[i] !== undefined) global_annos[i].cancelSelected();
   }
 }
+function addToggle(){
+  var toggled = false;
+  var dest = document.getElementById('views-form-transcription-editable-block-1-301').parentElement;//document.getElementsByClassName('views-form')[0];//document.getElementsByClassName('form-actions js-form-wrapper form-wrapper')[1];//document.getElementsByClassName('views-element-container')[0]; 
+  //^^^^^^MAY NEED TO FIND THIS MANUALLY
+  var toggle = document.createElement('button');
+  toggle.innerHTML = 'View Annotations';
+  toggle.className = 'toggle-transcription edit';
+  dest.appendChild(toggle);
+  var annotatable = document.createElement('div');
+  annotatable.className = 'annotatable-region';
+  var editableTranscript = document.getElementById('edit-form-field-field-transcription-0-field-transcription-0-value');//document.getElementsByTagName('textarea')[0];
+  annotatable.innerHTML = editableTranscript.innerHTML;
+  annotatable.style.height = '600px';
+  annotatable.style.overflow='scroll';
+  annotatable.style.resize='vertical';
+  annotatable.onscroll=function(){
+    jQuery('.annotatable-region').next('div').find('.r6o-editor').remove();
+  };
+  annotatable.style.display='none';
+  var saveButton = document.getElementById('edit-actions-submit');//document.getElementsByClassName('form-actions js-form-wrapper form-wrapper')[1]
+  saveButton.parentElement.insertBefore(annotatable, saveButton);
+  //MAY NEED TO FIND THIS MANUALLY^^^^^^
+  toggle.onclick = function (){
+    var value = editableTranscript.innerHTML;
+    //^^^^^^^FIND THIS MANUALLY!!!!
+    if (editableTranscript.style.display == 'none'){
+      toggle.className = 'toggle-transcription edit';
+      jQuery('#edit-actions-submit')[0].style.display='inline-block';
+      jQuery('.annotatable-region').next('div').find('.r6o-editor').remove();
+      annotatable.style.display='none';
+      toggle.innerHTML = 'View Annotations';
+      editableTranscript.style.display = 'block';
+    } 
+    else{
+      editableTranscript.style.display = 'none';
+      toggle.className = 'toggle-transcription view';
+      jQuery('#edit-actions-submit')[0].style.display='none';
+      toggle.innerHTML = 'Edit Transcript';
+      annotatable.style.display='block';
+      if (!toggled){
+        toggled = true;
+        initTextAnnotation(arguments[0], global_node, ['transcript', annotatable]);
+      }
+    }
+  } 
+}
 /**
  * Initializes text annotations for transcript in article view and
  * retreives node ID of Related Archival Object if applicable
@@ -105,12 +151,16 @@ function initSideBySide(perms, textInit = false){
   xmlHttp.open( "GET", url, false ); // false for synchronous request
   xmlHttp.send( null );
   var page_json = JSON.parse(xmlHttp.responseText);
+  var readOnly = (!perms['recogito create annotations'] &&
+      !perms['recogito edit annotations'] &&
+      !perms['recogito delete annotations'] &&
+      !perms['recogito edit own annotations'] &&
+      !perms['recogito delete own annotations']);
 // this is another way of the page numbers
 /*   var x = new XMLHttpRequest();
   var url = window.location.origin + window.location.pathname + '/children_rest?_format=json';
   x.open("GET", url, false);
   x.send( null );
-  console.log(JSON.parse(x.responseText));
   JSON.parse(x.responseText).forEach(element => console.log(element.nid)); */
   var related_field = 'field_related_archival_object' in page_json ? 'field_related_archival_object' : 'field_related_document';
   var page_field = 'field_page_ranges' in page_json ? 'field_page_ranges' : 'field_page_range';
@@ -122,8 +172,36 @@ function initSideBySide(perms, textInit = false){
     if (textInit)
     {
       setTimeout(function(){
-        var transcript = jQuery('#block-views-block-transcription-view-block-1').find('.field-content'); 
-        initTextAnnotation(perms, window.location.pathname.split('/')[2], transcript[0]);
+        
+        //var transcript = jQuery('#block-views-block-transcription-view-block-1').find('.field-content'); 
+        //initTextAnnotation(perms, window.location.pathname.split('/')[2], transcript[0]);
+        
+        if(window.location.search.includes('?mode=annotation')){// || readOnly){
+          
+          var newDiv = document.createElement('div');
+          newDiv.className = 'transcript-container-parent';
+          jQuery('.views-element-container').wrap(newDiv);
+          //jQuery('.views-element-container')[0].parentElement.style.overflow='visible';
+          jQuery('.transcript-container-parent')[0].style.overflow='visible';
+          //let transcript = jQuery('.views-field.views-field-field-transcription')[0];
+          jQuery('.views-element-container')[0].onscroll=function(){
+            jQuery('.transcript-container-parent').next('div').find('.r6o-editor').remove();
+          };
+          let transcript = jQuery('.views-element-container')[0].parentElement;
+          initTextAnnotation(perms, global_node, ['transcript', transcript]);
+        }
+        else if (perms['recogito view annotations'] && !readOnly){
+         // addToggle(perms);
+        }
+        else if (readOnly){
+          jQuery('.views-field.views-field-field-transcription')[0].onscroll=function(){
+            let editors =jQuery('.views-element-container')[0].parentElement.getElementsByClassName('r6o-editor');
+            for (editor in editors) editors[editor].remove();
+          };
+          let transcript = jQuery('.views-element-container')[0];
+          initTextAnnotation(perms, global_node, ['transcript', transcript]);
+        }
+          
         /* var h2s = document.querySelectorAll('h2');
         var j = 0;
         while (h2s[j].innerText !== 'Transcription') {
@@ -136,11 +214,43 @@ function initSideBySide(perms, textInit = false){
         } */
       }, 15);
     }
-    var pages = page_json[page_field][0]['value'].split('-');
-    var low_bound = Number(pages[0]);
-    var up_bound = Number(pages[pages.length - 1]);
-    //return an array of page numbers starting at the lower and ending at upper bound
-    return Array.from(new Array(up_bound - low_bound + 1), (x, i) => i + low_bound);
+
+    var identifiers = page_json[page_field][0]['value'].split('|');
+    var slice = identifiers.slice(1);
+    if (identifiers[0] == 'nid'){
+        return slice;
+    }
+    else if(identifiers[0] == 'nid_range'){
+      var pages = slice[0].split('-');
+      var low_bound = Number(pages[0]);
+      var up_bound = Number(pages[pages.length - 1]);
+      //return an array of page numbers starting at the lower and ending at upper bound
+      return Array.from(new Array(up_bound - low_bound + 1), (x, i) => i + low_bound);
+    }
+    else{ //already using node IDs can probably just keep same approach
+            //get JSON of related document
+      var relatedURL = page_json[related_field][0]['url'];
+      var xmlHttp2 = new XMLHttpRequest();
+      var url = window.location.origin + relatedURL + '/children_rest?_format=json';
+      xmlHttp2.open( "GET", url, false ); // false for synchronous request
+      xmlHttp2.send( null );
+      var related_json = JSON.parse(xmlHttp2.responseText);
+/////
+      let i = 0;
+      let j = 0;
+      var final = Array.from({length: slice.length});
+      while (i < related_json.length && j < slice.length){
+        if (slice.includes(related_json[i][identifiers[0]])){ //related_json[i][identifiers[0]] == identifiers[j]){
+          j++;
+          final[slice.indexOf(related_json[i][identifiers[0]])] = related_json[i]['nid'];
+        }
+        i++;
+      }
+      return final;
+      //loop thru JSON and construct NID array with matching values, maybe more efficient way to do this?
+      //return the NID array
+    }
+
   }
   else if (page_json['type'][0]['target_id'].endsWith('islandora_object'))
     return null; //islandora object w/o article view
@@ -509,6 +619,7 @@ function initTextAnnotation(perms/*, node_num, element_info */) {
   var range = drupalSettings.recogito_integration.annotation_range;
   var strings = drupalSettings.recogito_integration.taxonomy_terms;
   var default_term = drupalSettings.recogito_integration.default_term;
+  var perms = drupalSettings.recogito_integration.permissions;
   var readOnly = (!perms['recogito create annotations'] &&
       !perms['recogito edit annotations'] &&
       !perms['recogito delete annotations'] &&
@@ -706,8 +817,7 @@ function initTextAnnotation(perms/*, node_num, element_info */) {
       //getAnnotations(text_anno);
       // set default term (if applicable) as default tag
       //getAnnotations(text_anno, arguments[1]);
-      getAnnotations(arguments[2], text_anno, working_node);
-     // getAnnotations(arguments[2], text_anno, working_node);
+      getAnnotations(arguments[2], text_anno, working_node, readOnly);
       if (default_term != -1) { // ignore when no default tag is selected
         jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
           if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
@@ -822,6 +932,7 @@ function initTextAnnotation(perms/*, node_num, element_info */) {
         else
           delete_annotation(annotation);
       });
+      return text_anno;
     }
   }
   else {
@@ -1043,7 +1154,17 @@ function getAnnotations(element, recogito, node_num, readonly = false) {
     },
 
     success: function (data) {
+      console.log(data);
       for (annotation in data) {
+        /*if (element[0] == 'transcript'){ //correct off  by one error in transcript
+          data[annotation]['target_start'][0]['value'] = (Number(data[annotation]['target_start'][0]['value'])-1).toString();
+          data[annotation]['target_end'][0]['value'] = (Number(data[annotation]['target_end'][0]['value'])-1).toString();
+        }*/
+        if (element[0] == 'transcript' && !window.location.search.includes("?mode=annotation")){
+          let shft_amnt = readonly ? 132 : 156;
+          data[annotation]['target_start'][0]['value'] = (Number(data[annotation]['target_start'][0]['value'])-shft_amnt).toString();
+          data[annotation]['target_end'][0]['value'] = (Number(data[annotation]['target_end'][0]['value'])-shft_amnt).toString();
+        }
         w3c = convert_annotation_w3c(data[annotation]);
         recogito.addAnnotation(w3c, readonly);
       }
@@ -1225,7 +1346,7 @@ function addDeleteButton(annotation, text_anno){
   /* delete_button.style.position = 'relative';
    delete_button.style.right = '300px';*/
   delete_button.style.cssFloat = 'left';
-  delete_button.style.marginLeft =
+  //delete_button.style.marginLeft =
       delete_button.onclick = function (){
         if (!window.confirm("Are you sure you want to delete this annotation?\nThis action cannot be undone.")) return;
         text_anno.removeAnnotation(annotation);
