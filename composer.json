@@ -1,0 +1,6 @@
+{
+  "name": "drupal/recogito_integration",
+  "type": "drupal-module",
+  "description": "Creates API storage for Recogito annotations.",
+  "keywords": ["Drupal"]
+}
