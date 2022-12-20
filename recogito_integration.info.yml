@@ -3,7 +3,6 @@ description: 'Creates API storage for Recogito annotations'
 package: Custom
 type: module
 version: !!float 1
-core: 8.x
 core_version_requirement: ^8.8 || ^9 || ^10
 configure: recogito_settings
 dependencies:
