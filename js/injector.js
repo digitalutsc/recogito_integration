@@ -167,8 +167,10 @@ function initializeAdmin(perms){
   }
   else{
     for(var j = 0; j < article_content.length; j++){
-      var temp_num = article_content[j].innerHTML.split('node/')[1].split('/')[0]; //get the node to which the current content belongs
-      //if (articles[j].getAttribute('data-history-node-id')
+      //if (article_content[j] !== undefined && article_content[j].innerHTML.split('node/')[1] !== undefined) {
+      var temp_num = jQuery("article").attr('data-history-node-id'); 
+      //var temp_num = article_content[j].innerHTML.split('node/')[1].split('/')[0]; //get the node to which the current content belongs
+       //if (articles[j].getAttribute('data-history-node-id')
       if (temp_num !== null){
         //if (article_content[j].getElementsByTagName('p').length !== 0) 
         if (transcript === null){//repository item w/o transcript
@@ -184,6 +186,7 @@ function initializeAdmin(perms){
           initSimpleImageAnnotation(imgs[p], perms, temp_num);
         }
       }
+      //}
     }
   }
 
@@ -491,7 +494,8 @@ function initTextAnnotation(perms) {
     if (window.location.search.includes("?mode=annotation")){
       //jQuery("article > div.node__content").css('background-color', '#dfeaff');
       //changed by John
-      arguments[2].style.backgroundColor = '#dfeaff'; //change background of annotatable content
+      if (arguments[2] !== undefined)
+        arguments[2].style.backgroundColor = '#dfeaff'; //change background of annotatable content
     }
     var attach_element = jQuery("article > div.node__content");
   }

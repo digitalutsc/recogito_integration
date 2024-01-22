@@ -232,6 +232,7 @@ class AnnotationStorage extends ControllerBase {
   public function queryAnnotationNode($annotation_id)
   {
       $query = \Drupal::entityQuery('node');
+      $query->accessCheck(TRUE);
       $query->condition('status', 1);
       $query->condition('type', "annotation");
       $query->condition('field_annotation_id', $annotation_id);
@@ -332,6 +333,7 @@ class AnnotationStorage extends ControllerBase {
   public function queryAnnotationCollectionNode($page_url)
   {
       $query = \Drupal::entityQuery('node')
+      ->accessCheck(TRUE)
       ->condition('status', 1)
       ->condition('type', "annotation_collection")
       ->condition('field_annotation_collection_url', $page_url);
@@ -402,11 +404,13 @@ class AnnotationStorage extends ControllerBase {
   */
   public function DeleteUnneededTags() {
     $tids = \Drupal::entityQuery('taxonomy_term')
+      ->accessCheck(TRUE)
       -> condition('vid', \Drupal::config('recogito_integration.settings')->get('recogito_integration.annotation_vocab_name'))
       -> execute();
     foreach($tids as $tid) {
       $term = Term::load($tid);
       $tags = \Drupal::entityQuery('node')
+      ->accessCheck(TRUE)
       ->condition('status', 1)
       ->condition('type', "annotation_textualbody")
       ->condition('field_annotation_purpose', 'tagging')
