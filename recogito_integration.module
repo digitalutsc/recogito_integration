@@ -20,7 +20,7 @@ function recogito_integration_page_attachments(array &$attachments)
     $anno_contenttypes = \Drupal::config('recogito_integration.settings')->get('recogito_integration.content-type-to-annotated');
 
     $custom_mode = \Drupal::config('recogito_integration.settings')->get('recogito_integration.custom_dom') === 1 && !empty(\Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name'));
-    if (isset($node) && is_object($node) && (in_array($node->bundle(), array_filter(array_values($anno_contenttypes))) || $custom_mode === true)) {
+    if (isset($node) && is_object($node) && isset($anno_contenttypes) && (in_array($node->bundle(), array_filter(array_values($anno_contenttypes))))) {
       \Drupal::service('page_cache_kill_switch')->trigger();
       $vid = \Drupal::config('recogito_integration.settings')->get('recogito_integration.annotation_vocab_name');
       $terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vid);
@@ -54,12 +54,12 @@ function recogito_integration_page_attachments(array &$attachments)
           && !empty(\Drupal::config('recogito_integration.settings')->get('recogito_integration.initialsetup')))
           ? \Drupal::config('recogito_integration.settings')->get('recogito_integration.initialsetup') : false;
       
-      $attachments['#attached']['drupalSettings']['recogito_integration']['text_colour'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.text_colour');;    
-      $attachments['#attached']['drupalSettings']['recogito_integration']['background'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.background');;
-      $attachments['#attached']['drupalSettings']['recogito_integration']['underline_thickness'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.underline_thickness');;
-      $attachments['#attached']['drupalSettings']['recogito_integration']['underline_style'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.underline_style');;
-      $attachments['#attached']['drupalSettings']['recogito_integration']['underline_colour'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.underline_colour');;
-      $attachments['#attached']['drupalSettings']['recogito_integration']['background_transparency'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.background_transparency');;
+      $attachments['#attached']['drupalSettings']['recogito_integration']['text_colour'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.text_colour'); 
+      $attachments['#attached']['drupalSettings']['recogito_integration']['background'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.background');
+      $attachments['#attached']['drupalSettings']['recogito_integration']['underline_thickness'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.underline_thickness');
+      $attachments['#attached']['drupalSettings']['recogito_integration']['underline_style'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.underline_style');
+      $attachments['#attached']['drupalSettings']['recogito_integration']['underline_colour'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.underline_colour');
+      $attachments['#attached']['drupalSettings']['recogito_integration']['background_transparency'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.background_transparency');
       //$attachments['#attached']['drupalSettings']['recogito_integration']['attach_attribute_type'] = \Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_type');
       if (\Drupal::config('recogito_integration.settings')->get('recogito_integration.custom_dom') === 1)
         $attachments['#attached']['drupalSettings']['recogito_integration']['annotation_range'] = (in_array($node->bundle(), array_filter(array_values($anno_contenttypes)))) ? "full" : 'limited';
@@ -239,12 +239,22 @@ function getAnnotationCollection(\Drupal\Core\Entity\EntityInterface $entity)
   } else {
     $url = '/node/' . $entity->id();
   }
+  $field_storage = \Drupal\field\Entity\FieldStorageConfig::loadByName('node', 'field_annotation_collection_url');
+  if ($field_storage) {
+    return \Drupal::entityTypeManager()
+      ->getListBuilder('node')
+      ->getStorage()
+      ->loadByProperties([
+        'type' => 'annotation_collection',
+        'field_annotation_collection_url' => $url,
+        'status' => 1,
+      ]);
+  }
   return \Drupal::entityTypeManager()
     ->getListBuilder('node')
     ->getStorage()
     ->loadByProperties([
       'type' => 'annotation_collection',
-      'field_annotation_collection_url' => $url,
       'status' => 1,
     ]);
 }
@@ -386,8 +396,8 @@ function recogito_integration_menu_local_tasks_alter(&$data, $route_name, \Drupa
   $node = \Drupal::routeMatch()->getParameter('node');
 
   $custom_mode = \Drupal::config('recogito_integration.settings')->get('recogito_integration.custom_dom') === 1 && !empty(\Drupal::config('recogito_integration.settings')->get('recogito_integration.attach_attribute_name'));
-  if (\Drupal::currentUser()->isAuthenticated() && isset($node) && is_object($node) && get_class($node) === 'Drupal\node\Entity\Node'
-    && (in_array($node->bundle(), array_filter(array_values($anno_contenttypes))) || $custom_mode === true)) {
+  if (\Drupal::currentUser()->isAuthenticated() && isset($anno_contenttypes) && isset($node) && is_object($node) && get_class($node) === 'Drupal\node\Entity\Node'
+    && (in_array($node->bundle(), array_filter(array_values($anno_contenttypes))))) {
 
     if (isset($node)) {
       // Add a tab linking to node/add to all pages.

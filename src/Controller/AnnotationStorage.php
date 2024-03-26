@@ -39,6 +39,53 @@ class AnnotationStorage extends ControllerBase {
     return JsonResponse::fromJsonString(json_encode("Successful annotation creation"));
   }
 
+  public function constructStyle($tag_terms, $field_definitions) {
+    $config = \Drupal::config('recogito_integration.settings');
+    $style = array(
+      'text_color' => $config->get('recogito_integration.text_colour'),
+      'background' => $config->get('recogito_integration.background'),
+      'underline_style' => $config->get('recogito_integration.underline_style'),
+      'underline_thickness' => $config->get('recogito_integration.underline_thickness'),
+      'underline_color' => $config->get('recogito_integration.underline_colour'),
+      'background_transparency' => $config->get('recogito_integration.background_transparency'),
+    );
+    if (!$tag_terms) {
+      return $style;
+    }
+    $style_field = "";
+    foreach ($field_definitions as $field_name => $field_definition) {
+      if ($field_definition->getType() === 'annotation_profile') {
+        $style_field = $field_name;
+        break;
+      }
+    }
+    if (!empty($style_field)) {
+      $min = reset($tag_terms);
+      foreach ($tag_terms as $tag) {
+        $min_style = $min->get($style_field)->getValue();
+        $tag_style = $tag->get($style_field)->getValue();
+        if (empty($min_style) || isset($tag_style) && $min_style[0]['styling_choice'] == '0') {
+          $min = $tag;
+        }
+        elseif (!empty($tag_style) && $tag_style[0]['styling_choice'] == '1' && $tag_style[0]['styling_weight'] < $min_style[0]['styling_weight']) {
+          $min = $tag;
+        }
+      }
+      $min_style = $min->get($style_field)->getValue();
+      if (!empty($min_style) && $min_style[0]['styling_choice'] == '1') {
+        $style = array(
+          'text_color' => $min_style[0]['text_color'],
+          'background' => $min_style[0]['background_color'],
+          'underline_style' => $min_style[0]['underline_style'],
+          'underline_thickness' => $min_style[0]['underline_stroke'],
+          'underline_color' => $min_style[0]['underline_color'],
+          'background_transparency' => $min_style[0]['background_transparency'],
+        );
+      }
+    }
+    return $style;
+  }
+
   /**
   * Get an array of all annotation objects stored at the page provided by the HTTP request.
   * @return JsonResponse Annotation status after running function, or list of annotation objects if successful.
@@ -55,11 +102,23 @@ class AnnotationStorage extends ControllerBase {
     }
     #Get array of all references to annotations on this page
     $annotation_references = $annotation_collection_node->get('field_annotation_reference');
+    $config = \Drupal::config('recogito_integration.settings');
+    $tax_terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
+    $tax_vocab = $config->get('recogito_integration.annotation_vocab_name');
+    $field_definitions = \Drupal::service('entity_field.manager')->getFieldStorageDefinitions('taxonomy_term', $tax_vocab);
     #Create object to store & return all annotations on page
     $annotation_array = array();
     foreach($annotation_references->referencedEntities() as $annotation_node) {
       $textualbodies = array();
+      $tag_terms = array();
       foreach($annotation_node->get('field_annotation_textualbodies')->referencedEntities() as $textualbody) {
+        if ($textualbody->get('field_annotation_purpose')->getValue()[0]['value'] === "tagging") {
+          $terms = $tax_terms->loadByProperties(['name' => $textualbody->get('field_annotation_value')->getValue()[0]['value'], 'vid' => $tax_vocab]);
+          if (empty($terms)) {
+            continue;
+          }
+          $tag_terms[] = reset($terms);
+        }
         $textualbodies[] = array(
           'created' => $textualbody->get('field_annotation_created')->getValue(),
           'creator_id' => $textualbody->get('field_annotation_creator_id')->getValue(),
@@ -69,12 +128,15 @@ class AnnotationStorage extends ControllerBase {
           'value' => $textualbody->get('field_annotation_value')->getValue(),
         );
       }
+      $style = self::constructStyle($tag_terms, $field_definitions);
       $annotation_object = array(
         'id' => $annotation_node->get('field_annotation_id')->getValue(),
         'target_end' => $annotation_node->get('field_annotation_target_end')->getValue(),
         'target_exact' => $annotation_node->get('field_annotation_target_exact')->getValue(),
         'target_start' => $annotation_node->get('field_annotation_target_start')->getValue(),
-        'textualbodies' => $textualbodies
+        'target_element' => $annotation_node->get('field_annotation_target_element')->getValue(),
+        'style' => $style,
+        'textualbodies' => $textualbodies,
       );
       if ($annotation_node->get('field_annotation_type')->getValue()[0]["value"] == "Selection") {
         $annotation_object['image_source'] = $annotation_node->get('field_annotation_image_source')->getValue();
@@ -168,7 +230,6 @@ class AnnotationStorage extends ControllerBase {
       $textualbody->delete();
     }
     Node::load($annotation_node)->delete();
-    self::DeleteUnneededTags();
     return JsonResponse::fromJsonString(json_encode("Successful annotation deletion"));
   }
 
@@ -271,6 +332,7 @@ class AnnotationStorage extends ControllerBase {
         $params['field_annotation_target_end'] = $annotation->target_end;
         $params['field_annotation_target_exact'] = $annotation->target_exact;
         $params['field_annotation_target_start'] = $annotation->target_start;
+        $params['field_annotation_target_element'] = $annotation->target_element;
       }
 
       $node = Node::create($params);

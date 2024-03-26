@@ -1,18 +1,8 @@
-var global_annos = []
-const MAX_TAG_LENGTH = '150'
+var global_annos = [];
+const MAX_TAG_LENGTH = '150';
+var annoObj = {};
 jQuery(document).ready(function () {
   // kyle added to handle the issue View tab and Add/Edit Annotation have same URL
-  if (window.location.search.includes('?mode=annotation')) {
-    jQuery("ul.tabs li a").each(function (index) {
-      if (jQuery(this).text().includes("View") && jQuery(this).attr("href").includes('?mode=annotation')) {
-        $newurl = jQuery(this).attr("href").replace("?mode=annotation", "");
-        jQuery(this).attr("href", $newurl);
-        jQuery(this).removeClass("is-active");
-        return false;
-      }
-    });
-  }
-  annotationStyling();
   var can_read_annotations = false;
   var perms = drupalSettings.recogito_integration.permissions;
   if (perms['recogito view annotations'] && !window.location.pathname.includes('recogito_integration')) {
@@ -33,48 +23,18 @@ jQuery(document).ready(function () {
  * @param {string} hex the hex color code
  * @returns the RGBA representation of hex
  */
-function hexToRgbA(hex){
-  var c;
+function hexToRgbA(hex, transparency = 1){
+  let c;
+  transparency === null ? 0 : transparency;
   if(/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)){
       c= hex.substring(1).split('');
       if(c.length== 3){
           c= [c[0], c[0], c[1], c[1], c[2], c[2]];
       }
       c= '0x'+c.join('');
-      return 'rgba('+[(c>>16)&255, (c>>8)&255, c&255].join(',')+',1)';
+      return 'rgba('+[(c>>16)&255, (c>>8)&255, c&255].join(',')+`,${transparency})`;
   }
   throw new Error('Bad Hex');
-}
-/**
- * Applies CSS rules according to user configurations
- */
-function annotationStyling(){
-  let textColour = drupalSettings.recogito_integration.text_colour === null ? '' 
-    : hexToRgbA(drupalSettings.recogito_integration.text_colour);
-  if (drupalSettings.recogito_integration.background === null) {
-    var backgroundColour = '';
-  }
-  else{
-    var temp = hexToRgbA(drupalSettings.recogito_integration.background);
-    var backgroundColour = temp.split(',')[0] + ','+ temp.split(',')[1] + 
-      ','+temp.split(',')[2] + ',' + drupalSettings.recogito_integration.background_transparency + ')';
-  }
-  let underlineThickness = drupalSettings.recogito_integration.underline_thickness === null ? '' 
-    : drupalSettings.recogito_integration.underline_thickness;
-  let underlineStyle = drupalSettings.recogito_integration.underline_style === null ? '' 
-    : drupalSettings.recogito_integration.underline_style;    
-  let underlineColour = drupalSettings.recogito_integration.underline_colour === null ? '' 
-    : hexToRgbA(drupalSettings.recogito_integration.underline_colour);
-  //rgba(154, 18, 179, 0.5)
-  var style = `.r6o-annotation{
-    background: ${backgroundColour} !important;
-    border-bottom: ${underlineThickness}px ${underlineStyle} ${underlineColour}; !important;
-    color: ${textColour} !important;
-  }`;
-  var styleSheet = document.createElement("style");
-  styleSheet.type = "text/css";
-  styleSheet.innerText = style;
-  document.head.appendChild(styleSheet);
 }
 
 /**
@@ -150,17 +110,16 @@ function initSideBySide(perms, textInit = false){
  * @param perms : assigned permission config
  */
 function initializeAdmin(perms){
-  setTimeout(highlightActive, 30);
+  // setTimeout(highlightActive, 30);
   var transcript = initSideBySide(perms, true);
   // var articles = jQuery('article');
-  var article_content = jQuery("article").find('.node__content');
+  var article_content = jQuery(".node__content");
   if (!article_content.length){ //this should never happen
     initTextAnnotation(perms);
     setTimeout(function (){
       //initialize annotations for all simple images on the page
       var imgElements = jQuery("main").find("img");
-      var i;
-      for (i = 0; i<imgElements.length;i++){
+      for (let i = 0; i<imgElements.length;i++){
         initSimpleImageAnnotation(imgElements[i], perms);
       }
     }, 150)
@@ -331,9 +290,9 @@ function initSimpleImageAnnotation(image, perms, node_num){
     // check with John
     //create_annotation(annotation);
     if (!curr_node)
-      create_annotation(annotation, node_num);
+      create_annotation(annotation, node_num, "IMG");
     else
-      create_annotation(annotation);
+      create_annotation(annotation, -1, "IMG");
   });
 
   anno.on('updateAnnotation', function (annotation, previous) {
@@ -473,16 +432,10 @@ function initTextAnnotation(perms) {
     for (var j = 0; j < customAttributeName.length; j++) {
       var element = jQuery(customAttributeName[j]);
       if (customAttributeName[j].startsWith("#")) {
-        if (window.location.search == "?mode=annotation") {
-          element.css('background-color', '#dfeaff');
-        }
         attach_element.push(element[0]);
       }
       else {
         for (var k = 0; k < element.length; k++) {
-          if (window.location.search == "?mode=annotation") {
-            element[k].css('background-color', '#dfeaff');
-          }
           attach_element.push(element[k]);
         }
       }
@@ -490,19 +443,31 @@ function initTextAnnotation(perms) {
   }
   else {
     // change background for annotated area:
-    //if (window.location.search == "?mode=annotation") {
     if (window.location.search.includes("?mode=annotation")){
-      //jQuery("article > div.node__content").css('background-color', '#dfeaff');
-      //changed by John
       if (arguments[2] !== undefined)
         arguments[2].style.backgroundColor = '#dfeaff'; //change background of annotatable content
     }
     var attach_element = jQuery("article > div.node__content");
+    for (var j = 0; j < customAttributeName.length; j++) {
+      var element = jQuery(customAttributeName[j]);
+      if (customAttributeName[j].startsWith("#")) {
+        if (window.location.search == "?mode=annotation") {
+          element.style.backgroundColor = '#dfeaff';
+        }
+        attach_element.push(element[0]);
+      }
+      else {
+        for (var k = 0; k < element.length; k++) {
+          if (window.location.search == "?mode=annotation") {
+            element[k].style.backgroundColor = '#dfeaff';
+          }
+          attach_element.push(element[k]);
+        }
+      }
+    }
   }
-
   // check  annotation are allow to be enable for DOM or content type. If not, display warning
   if (attach_element[0] !== -1 ) {
-
     // need [0] because selector returns an array instead of object
     if (arguments.length !== 3){
       for (var i = 0; i < attach_element.length; i++) {
@@ -510,7 +475,6 @@ function initTextAnnotation(perms) {
           content: attach_element[i], // Element id or DOM node to attach to
           allowEmpty: true,
           locale: 'auto',
-         // readonly: readOnly,
           widgets: [
             'COMMENT',
             {widget: 'TAG', vocabulary: strings}
@@ -518,9 +482,9 @@ function initTextAnnotation(perms) {
           relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs '],
           readOnly: readOnly && !window.location.search.includes("?mode=annotation") //John added this
         });
+        text_anno.domHookEle = attach_element[i];
         text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
 
-        getAnnotations(text_anno);
         if (default_term != -1) { // ignore when no default tag is selected
           jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
             if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
@@ -579,11 +543,12 @@ function initTextAnnotation(perms) {
           else if (perms['recogito create annotations'] === false)
             alert("Your annotation won't be saved because you don't have permission to create annotation for this content.")
           else{
-            create_annotation(annotation);
+            create_annotation(annotation, -1, text_anno.domHookEle);
           }
         });
 
         text_anno.on('updateAnnotation', function (annotation, previous) {
+          console.log("Test");
           // TODO: check if there is preset configuration ready before intial Recogito JS annotation
           if (drupalSettings.recogito_integration.initial_setup === false)
             alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
@@ -607,129 +572,133 @@ function initTextAnnotation(perms) {
             delete_annotation(annotation);
         });
       }
+      getAnnotations(readOnly);
     }
     else{
       var working_node = arguments[1];
-      var text_anno = Recogito.init({
-        content: arguments[2], // Element id or DOM node to attach to
-        allowEmpty: false,  //changed to false by John
-        locale: 'auto',
-        readonly: readOnly,
-        widgets: [
-          'COMMENT',
-          {widget: 'TAG', vocabulary: strings}
-        ],
-        relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs '],
-        readOnly: readOnly || !window.location.search.includes("?mode=annotation")  //John added this
-      });
-      text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
-      text_anno.annotations = [];
-      // check with John
-      //getAnnotations(text_anno);
-      // set default term (if applicable) as default tag
-      getAnnotations(text_anno, arguments[1]);
-      if (default_term != -1) { // ignore when no default tag is selected
-        jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
-          if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
-            cancelAllSelections();
-            setTimeout(setDefaultTerm, 10);
-            //setTimeout(addCountWords, 25);
-           // setTimeout(addCountableTag, 25);
-            setTimeout(addMaxLength, 25);
-
-            return;
-          }
+      for (var i = 0; i < attach_element.length; i++) {
+        var text_anno = Recogito.init({
+          content: attach_element[i], // Element id or DOM node to attach to
+          allowEmpty: false,  //changed to false by John
+          locale: 'auto',
+          widgets: [
+            'COMMENT',
+            {widget: 'TAG', vocabulary: strings}
+          ],
+          relationVocabulary: ['isRelated', 'isPartOf', 'isSameAs '],
+          readOnly: readOnly || !window.location.search.includes("?mode=annotation")  //John added this
         });
-      }
-      text_anno.on('selectAnnotation', function (annotation) {
-
-//        resizeList();
-        // TODO: check if there is preset configuration ready before intial Recogito JS annotation
-        if (drupalSettings.recogito_integration.initial_setup){
-          window.location.search.includes("?mode=annotation") && setTimeout(addDeleteButton, 30, annotation, text_anno);
-          highlightAnnotatedContent(annotation);
-          if (text_anno.readOnly == undefined || !text_anno.readOnly) {
-            setTimeout(addAccessibilityLabel, 15);
-
-            // only View tab or Front facing show rendered HTML annotation text
-            if (window.location.search !== "?mode=annotation") {
-              setTimeout(displayAnnotationAsHTML, 20);
-            }
-          }
-          if (readOnly || !window.location.search.includes("?mode=annotation") ) {
-            setTimeout(function () {
-              var tag_lists = jQuery(".r6o-widget.r6o-tag");
-              for (let i = 0; i < tag_lists.length; i++) {
-                if (tag_lists[i].getElementsByClassName('r6o-taglist').length == 0)
-                  tag_lists[i].style.display = 'none';
-              }
-              /*if (!jQuery(".r6o-label").length) {
-                jQuery(".r6o-widget.r6o-tag").hide();
-              }*/
-            }, 25);
-            setTimeout(fixList, 25);
-          }
-          else {
-            cancelAllSelections();
-          }
-
-        }
-        else{
-          alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
-        }
-      });
-
-      text_anno.on('createAnnotation', function (annotation) {
+        text_anno.setAuthInfo({'id': user_data.id, 'displayName': user_data.displayName});
+        text_anno.domHookEle = attach_element[i];
+        annoObj[convert_dom_element_object(text_anno.domHookEle)] = text_anno;
+        text_anno.annotations = [];
+        // check with John
+        //getAnnotations(text_anno);
+        // set default term (if applicable) as default tag
         if (default_term != -1) { // ignore when no default tag is selected
+          jQuery( ".node__content" ).bind('DOMSubtreeModified', function (e) {
+            if (e.target.tagName === "SPAN" && e.target.hasAttribute("data-id") === false) {
+              cancelAllSelections();
+              setTimeout(setDefaultTerm, 10);
+              //setTimeout(addCountWords, 25);
+            // setTimeout(addCountableTag, 25);
+              setTimeout(addMaxLength, 25);
 
-          // add a fix for 500 error when add diacritics (.ie: Öçè) to a comment or reply
-          //annotation.body[0].value = encode_utf8(annotation.body[0].value);
-          for (var i = 0; i < annotation.body.length; i++) {
-            annotation.body[i].value = encode_utf8(annotation.body[i].value);
-          }
-
-          // set "footnote" as default vocabulary
-          var tmp = annotation.body[0];
-          annotation.body.push({
-            created: tmp.created,
-            creator: tmp.creator,
-            modified: tmp.modified,
-            purpose: "tagging",
-            type: tmp.type,
-            value: default_term,
+              return;
+            }
           });
         }
-        // TODO: check if there is preset configuration ready before intial Recogito JS annotation
-        if (drupalSettings.recogito_integration.initial_setup === false)
-          alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
-        else if (perms['recogito create annotations'] === false)
-          alert("Your annotation won't be saved because you don't have permission to create annotation for this content.")
-        else{
-          create_annotation(annotation, working_node, text_anno);
-        }
+        text_anno.on('selectAnnotation', function (annotation) {
+  //        resizeList();
+          // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+          if (drupalSettings.recogito_integration.initial_setup){
+            window.location.search.includes("?mode=annotation") && setTimeout(addDeleteButton, 30, annotation, text_anno);
+            highlightAnnotatedContent(annotation);
+            if (text_anno.readOnly == undefined || !text_anno.readOnly) {
+              setTimeout(addAccessibilityLabel, 15);
 
-      });
-      text_anno.on('updateAnnotation', function (annotation, previous) {
-        // TODO: check if there is preset configuration ready before intial Recogito JS annotation
-        if (drupalSettings.recogito_integration.initial_setup === false)
-          alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
-        else if (perms['recogito edit annotations'] === false)
-          alert("Your annotation won't be saved because you don't have permission to update this annotation of this content.")
-        else {
-          if (JSON.stringify(annotation) !== JSON.stringify(previous)) //only update if there is actually a change (reduces unneccessary refresh)
-            update_annotation(annotation, previous);
-        }
-      });
-      text_anno.on('deleteAnnotation', function (annotation) {
-        // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+              // only View tab or Front facing show rendered HTML annotation text
+              if (window.location.search !== "?mode=annotation") {
+                setTimeout(displayAnnotationAsHTML, 20);
+              }
+            }
+            if (readOnly || !window.location.search.includes("?mode=annotation") ) {
+              setTimeout(function () {
+                var tag_lists = jQuery(".r6o-widget.r6o-tag");
+                for (let i = 0; i < tag_lists.length; i++) {
+                  if (tag_lists[i].getElementsByClassName('r6o-taglist').length == 0)
+                    tag_lists[i].style.display = 'none';
+                }
+                /*if (!jQuery(".r6o-label").length) {
+                  jQuery(".r6o-widget.r6o-tag").hide();
+                }*/
+              }, 25);
+              setTimeout(fixList, 25);
+            }
+            else {
+              cancelAllSelections();
+            }
 
-        if (drupalSettings.recogito_integration.initial_setup === false)
-          alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
-        else if (perms['recogito delete annotations'] === false)
-          alert("Your annotation won't be saved because you don't have permission to update this annotation of this content.")
-        else
-          delete_annotation(annotation);
-      });
+          }
+          else{
+            alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
+          }
+        });
+        (function(element){
+          text_anno.on('createAnnotation', function (annotation) {
+            if (default_term != -1) { // ignore when no default tag is selected
+  
+              // add a fix for 500 error when add diacritics (.ie: Öçè) to a comment or reply
+              //annotation.body[0].value = encode_utf8(annotation.body[0].value);
+              for (var i = 0; i < annotation.body.length; i++) {
+                annotation.body[i].value = encode_utf8(annotation.body[i].value);
+              }
+  
+              // set "footnote" as default vocabulary
+              var tmp = annotation.body[0];
+              annotation.body.push({
+                created: tmp.created,
+                creator: tmp.creator,
+                modified: tmp.modified,
+                purpose: "tagging",
+                type: tmp.type,
+                value: default_term,
+              });
+            }
+            // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+            if (drupalSettings.recogito_integration.initial_setup === false)
+              alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
+            else if (perms['recogito create annotations'] === false)
+              alert("Your annotation won't be saved because you don't have permission to create annotation for this content.")
+            else{
+              create_annotation(annotation, working_node, element);
+            }
+          });
+        })(attach_element[i]);
+        text_anno.on('updateAnnotation', function (annotation, previous) {
+          // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+          if (drupalSettings.recogito_integration.initial_setup === false)
+            alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
+          else if (perms['recogito edit annotations'] === false)
+            alert("Your annotation won't be saved because you don't have permission to update this annotation of this content.")
+          else {
+            if (JSON.stringify(annotation) !== JSON.stringify(previous)) { //only update if there is actually a change (reduces unneccessary refresh)
+              update_annotation(annotation, previous);
+            }
+          }
+        });
+        text_anno.on('deleteAnnotation', function (annotation) {
+          // TODO: check if there is preset configuration ready before intial Recogito JS annotation
+
+          if (drupalSettings.recogito_integration.initial_setup === false)
+            alert("Your annotation won't be saved because Recogito Annotation has not been setup yet. \n\nPlease setup the configuration at "+window.location.protocol+ "//" +window.location.hostname+"/admin/config/development/recogito_integration");
+          else if (perms['recogito delete annotations'] === false)
+            alert("Your annotation won't be saved because you don't have permission to update this annotation of this content.")
+          else
+            delete_annotation(annotation);
+        });
+      }
+      getAnnotations(readOnly, arguments[1]);
     }
   }
   else {
@@ -767,7 +736,6 @@ function displayAnnotationAsHTML () {
   // Kyle added for support italic for annotation text
   jQuery(".r6o-editable-text").each( function (index) {
     if (jQuery(this).prop('disabled') === true) {
-      console.log(jQuery(this).prop('disabled'));
       jQuery(this).before('<div class="readonly-anno">' + jQuery(this).val()+ '</div>');
       jQuery(this).hide();
     }
@@ -926,6 +894,15 @@ function addAccessibilityLabel()
   jQuery(loc).attr("aria-labelledby", id);
 }
 
+function addAnnotations(w3c, ro, hookEle, style) {
+  annoObj[hookEle].addAnnotation(w3c, ro);
+  jQuery(`[data-id='${w3c.id}']`).css({
+    'background': hexToRgbA(style.background, style.background_transparency),
+    'color': style.text_color,
+    'border-bottom': `${style.underline_thickness}px ${style.underline_style} ${hexToRgbA(style.underline_color)}`
+  });
+}
+
 
 /**
  * Ajax call to get list of annotation base on node url
@@ -933,7 +910,7 @@ function addAccessibilityLabel()
  * @param recogito
  * @param node_num : int the node to get the annotations for
  */
-function getAnnotations(recogito, node_num, readonly = false) {
+function getAnnotations(readOnly, node_num, ro = false) {
   var page_url = window.location.pathname;
   if (typeof node_num !== "boolean" && //make sure a node number is actually being used
       node_num !== window.location.pathname.split('/')[2]) page_url = '/node/' + node_num;//construct the URL is necessary
@@ -948,7 +925,12 @@ function getAnnotations(recogito, node_num, readonly = false) {
     success: function (data) {
       for (annotation in data) {
         w3c = convert_annotation_w3c(data[annotation]);
-        recogito.addAnnotation(w3c, readonly);
+        if (data[annotation].target_element.length <= 0) {
+          addAnnotations(w3c, ro, 'DIV.node__content', data[annotation].style);
+        }
+        else {
+          addAnnotations(w3c, ro, data[annotation].target_element[0].value, data[annotation].style);
+        }
       }
     },
     error: function (xhr, status, error) {
@@ -1008,7 +990,6 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
       },
 
       success: function (data) {
-        console.log(data);
         for (annotation in data) {
           w3c = convert_annotation_w3c(data[annotation]);
           //make sure this annotation belongs here
@@ -1035,7 +1016,6 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
     },
 
     success: function (data) {
-      console.log(data);
       for (annotation in data) {
         w3c = convert_annotation_w3c(data[annotation]);
         //make sure this annotation belongs here
@@ -1080,15 +1060,15 @@ function initOpenSeadragonAnnnotation(viewer, perms, node_num) {
 
     if (node_num.length == undefined) //all pages belong to the same node
     {  
-      create_annotation(annotation, node_num, viewer.currentPage());
+      create_annotation(annotation, node_num, "IMG");
       var parent = getParentNode(node_num);
       if (parent !== null && !viewer.currentPage()) {
-        create_annotation(annotation, parent, viewer.currentPage());
+        create_annotation(annotation, parent, "IMG");
       }
     }
     else //each page has a different node ID
     {  
-      create_annotation(annotation, node_num[viewer.currentPage()], viewer.currentPage()); //add the annotation to the page's node
+      create_annotation(annotation, node_num[viewer.currentPage()], "IMG"); //add the annotation to the page's node
       /* var parent = getParentNode(node_num[0]);
       if (parent !== null && !viewer.currentPage()) { //if page belongs to a book and this is the first page, add anno to book as well
         create_annotation(annotation, parent, viewer.currentPage());
@@ -1117,7 +1097,7 @@ function addDeleteButton(annotation, text_anno){
 
   var delete_button = document.createElement('button');
   delete_button.innerHTML = 'Delete';
-  delete_button.className = 'delete-text-annotation';
+  delete_button.className = 'delete-text-annotation r6o-btn';
   /* delete_button.style.position = 'relative';
    delete_button.style.right = '300px';*/
   delete_button.style.cssFloat = 'left';
@@ -1254,18 +1234,40 @@ function highlightAnnotatedContent(a) {
   })();
 }
 
+function convert_dom_element_object(e) {
+  var domString = e.tagName;
+  var attr = e.attributes;
+  for (var i = 0; i < attr.length; i++) {
+    if (attr[i].name === "id") {
+      domString += `#${attr[i].value}`;
+    }
+    else if (attr[i].name === "class") {
+      domString += `.${attr[i].value.replaceAll(" ", ".")}`;
+    }
+    else if (attr[i].name === "headers") {
+      domString += `[${attr[i].name}="${attr[i].value}"]`
+    }
+  }
+  return domString;
+}
+
 /**
  * Create an annotation within Drupal, given W3C data
  *
  * @param a
  * @param node_num : int the on which the annotation is created
  */
-function create_annotation(a, /*, node_num*/) {
+function create_annotation(a, node_num, domObj) {
   var page_url;
   var annotation_obj = convert_annotation_object(a);
-  
+  if (domObj !== "IMG") {
+    annotation_obj.target_element = convert_dom_element_object(domObj);
+  }
+  else {
+    annotation_obj.target_element = domObj;
+  }
   // check with John
-  arguments.length >= 2 ? page_url = '/node/' + arguments[1] : page_url = window.location.pathname;
+  node_num != null && node_num > -1 ? page_url = '/node/' + node_num : page_url = window.location.pathname;
   jQuery.ajax({
     type: "POST",
     url: "/recogito_integration/create",
@@ -1276,7 +1278,6 @@ function create_annotation(a, /*, node_num*/) {
     },
 
     success: function (data) {
-      console.log(data);
       location.reload();
     },
     error: function (xhr, status, error) {
@@ -1309,7 +1310,6 @@ function update_annotation(annotation, previous) {
     },
 
     success: function (data) {
-      console.log(data);
       location.reload();
     //  getAnnotations(annotation);
     },
@@ -1331,7 +1331,6 @@ function delete_annotation(annotation) {
     annotation_obj['textualbodies'][i]['value'] = '';
   }
 
-  console.log(annotation_obj);
   jQuery.ajax({
     type: "DELETE",
     url: "/recogito_integration/delete",
@@ -1341,7 +1340,6 @@ function delete_annotation(annotation) {
     },
 
     success: function (data) {
-      console.log(data);
       location.reload();
     },
     error: function (xhr, status, error) {
@@ -1443,4 +1441,3 @@ function convert_annotation_w3c(annotation_object) {
 
   return annotation_w3c;
 }
-

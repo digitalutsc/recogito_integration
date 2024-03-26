@@ -62,14 +62,6 @@ class RecogitoIntegrationForm extends ConfigFormBase
       '#type' => 'container',
       '#attributes' => ['id' => 'container-custom-mode'],
     ];
-    $options_background_colours = ['red' => 'red', 'yellow' => 'yellow', 'purple' => 'purple'];
-/*     $form['background'] = [
-      '#type' => 'select',
-      '#title' => t('Background of annotated content'),
-      '#options' => $options_background_colours,
-      '#default_value' => ($config->get('recogito_integration.background') !== null) ? $config->get('recogito_integration.background') : [],
-      '#required' => true
-    ]; */
     $text_colour_desc = 'The colour of the annotated text. If omitted, annotated text will be the 
       same colour as un-annotated text.';
     $form['text_colour'] = array(
@@ -98,7 +90,7 @@ class RecogitoIntegrationForm extends ConfigFormBase
       '#description' => t('Choose 0 to omit any underlines.'),
       '#min' => 0,
       '#step' => 0.1,
-      '#default_value' => ($config->get('recogito_integration.underline_thickness') !== null) ? $config->get('recogito_integration.underline_thickness') : [],
+      '#default_value' => ($config->get('recogito_integration.underline_thickness') !== null) ? $config->get('recogito_integration.underline_thickness') : 1,
       '#required' => true
     );
     $form['underline_colour']= array(
@@ -106,9 +98,9 @@ class RecogitoIntegrationForm extends ConfigFormBase
       '#title' => t('Annotation Underline Colour'),
       '#default_value' => ($config->get('recogito_integration.underline_colour') !== null) ? $config->get('recogito_integration.underline_colour') : [],
     );
-    $underline_style_options = ['dotted' => 'dotted', 'dashed' => 'dashed', 'solid' => 'solid', 
-    'double' => 'double', 'groove' => 'groove', 'ridge' => 'ridge', 'inset' => 'inset', 
-    'outset' => 'outset', 'none' => 'none'];
+    $underline_style_options = ['dotted' => 'Dotted', 'dashed' => 'Dashed', 'solid' => 'Solid', 
+    'double' => 'Double', 'groove' => 'Groove', 'ridge' => 'Ridge', 'inset' => 'Inset', 
+    'outset' => 'Outset', 'none' => 'None'];
     $form['underline_style'] = [
       '#type' => 'select',
       '#title' => t('Underline Style'),
@@ -190,6 +182,7 @@ class RecogitoIntegrationForm extends ConfigFormBase
       '#options' => $options_taxonomy,
       //'#default_value' => $selected_vocalbulary,
       '#default_value' => $config->get('recogito_integration.annotation_vocab_name'),
+      '#required' => true,
       '#ajax' => [
         'callback' => '::selectVocabularyCallback',
         'wrapper' => 'instrument-fieldset-container',
