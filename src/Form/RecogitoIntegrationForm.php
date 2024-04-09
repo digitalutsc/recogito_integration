@@ -357,7 +357,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
         'annotation_textualbody',
       ])) {
         $config_new[$id] = $config_content[$id] ?? [];
-        $config_new[$id]['enabled'] = $form_state->getValue($id . '_annotatable');
+        $config_new[$id]['enabled'] = $form_state->getValue($id . '_annotatable') ?? 0;
         if ($config_new[$id]['enabled']) {
           $config_new[$id]['fields'] = $form_state->getValue($id . '_annotatable_fields');
         }
