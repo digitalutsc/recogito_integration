@@ -4,227 +4,77 @@ namespace Drupal\recogito_integration\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\taxonomy\Entity\Vocabulary;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Entity\EntityFieldManagerInterface;
+use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\field\Entity\FieldConfig;
 
-class RecogitoIntegrationForm extends ConfigFormBase
-{
+class RecogitoIntegrationForm extends ConfigFormBase {
+
+  /**
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
+   * The entity field manager.
+   *
+   * @var \Drupal\Core\Entity\EntityFieldManagerInterface
+   */
+  protected $entityFieldManager;
+
+  /**
+   * The cache tags invalidator.
+   *
+   * @var \Drupal\Core\Cache\CacheTagsInvalidatorInterface
+   */
+  protected $cacheTagsInvalidator;
+
+  /**
+   * Constructs a new RecogitoIntegrationForm.
+   *
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The entity type manager.
+   * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager
+   *   The entity field manager.
+   * @param \Drupal\Core\Cache\CacheTagsInvalidatorInterface $cache_tags_invalidator
+   *   The cache tags invalidator.
+   */
+  public function __construct(
+    EntityTypeManagerInterface $entity_type_manager,
+    EntityFieldManagerInterface $entity_field_manager,
+    CacheTagsInvalidatorInterface $cache_tags_invalidator) {
+    $this->entityTypeManager = $entity_type_manager;
+    $this->entityFieldManager = $entity_field_manager;
+    $this->cacheTagsInvalidator = $cache_tags_invalidator;
+  }
 
   /**
    * {@inheritdoc}
    */
-  public function getFormId()
-  {
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('entity_type.manager'),
+      $container->get('entity_field.manager'),
+      $container->get('cache_tags.invalidator')
+    );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getFormId() {
     return 'recogito_integration_form';
   }
 
   /**
-   * {@inheritdoc}
-   */
-  public function buildForm(array $form, FormStateInterface $form_state)
-  {
-    $form = parent::buildForm($form, $form_state);
-    $config = $this->config('recogito_integration.settings');
-    // pull list of exsiting content types of the site
-    $content_types = \Drupal::entityTypeManager()
-      ->getStorage('node_type')
-      ->loadMultiple();
-    $options_contentypes = array();
-    foreach ($content_types as $ct) {
-      if (!in_array($ct->id(), ['annotation_collection', 'annotation', 'annotation_textualbody'])) {
-        $options_contentypes[$ct->id()] = $ct->label();
-      }
-    }
-
-    $form['set-permission'] = array(
-      '#markup' => $this->t("<p><strong>For permission, please configure which user(s) can create, update, and delete annotation for content at <a href='/admin/people/permissions'>here</a></strong>.</p>")
-    );
-
-    $form['select-content-types'] = array(
-      '#type' => 'checkboxes',
-      '#title' => t('Which content type(s) to be annotated:'),
-      '#options' => $options_contentypes,
-      '#default_value' => ($config->get('recogito_integration.content-type-to-annotated') !== null) ? array_keys(array_filter($config->get('recogito_integration.content-type-to-annotated'))) : [],
-      '#required' => true,
-    );
-
-    $form['custom-annotation'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Custom'),
-      '#ajax' => [
-        'callback' => '::customModeCallback',
-        'wrapper' => 'container-custom-mode',
-        'effect' => 'fade',
-      ],
-      '#default_value' => ($config->get('recogito_integration.custom_dom') !== null) ? $config->get('recogito_integration.custom_dom') : 0,
-    ];
-    // Wrap textfields in a container. This container will be replaced through
-    // AJAX.
-    $form['custom_mode_container'] = [
-      '#type' => 'container',
-      '#attributes' => ['id' => 'container-custom-mode'],
-    ];
-    $options_background_colours = ['red' => 'red', 'yellow' => 'yellow', 'purple' => 'purple'];
-/*     $form['background'] = [
-      '#type' => 'select',
-      '#title' => t('Background of annotated content'),
-      '#options' => $options_background_colours,
-      '#default_value' => ($config->get('recogito_integration.background') !== null) ? $config->get('recogito_integration.background') : [],
-      '#required' => true
-    ]; */
-    $text_colour_desc = 'The colour of the annotated text. If omitted, annotated text will be the 
-      same colour as un-annotated text.';
-    $form['text_colour'] = array(
-      '#type' => 'color',
-      '#title' => t('Annotated Text Colour'),
-      '#description' => t($text_colour_desc),
-      '#default_value' => ($config->get('recogito_integration.text_colour') !== null) ? $config->get('recogito_integration.text_colour') : 'black',
-    );
-    $form['background']= array(
-      '#type' => 'color',
-      '#title' => t('Annotation Background Colour'),
-      '#default_value' => ($config->get('recogito_integration.background') !== null) ? $config->get('recogito_integration.background') : [],
-    );
-    $form['background_transparency'] = array(
-      '#type' => 'number',
-      '#title' => t('Annotation Background Transparency'),
-      '#description' => t('Choose 0 to remove all background highlighting.'),
-      '#min' => 0,
-      '#max' => 1,
-      '#step' => 0.1,
-      '#default_value' => ($config->get('recogito_integration.background_transparency') !== null) ? $config->get('recogito_integration.background_transparency') : []
-    );
-    $form['underline_thickness'] = array(
-      '#type' => 'number',
-      '#title' => t('Annotation Underline Thickness (px)'),
-      '#description' => t('Choose 0 to omit any underlines.'),
-      '#min' => 0,
-      '#step' => 0.1,
-      '#default_value' => ($config->get('recogito_integration.underline_thickness') !== null) ? $config->get('recogito_integration.underline_thickness') : [],
-      '#required' => true
-    );
-    $form['underline_colour']= array(
-      '#type' => 'color',
-      '#title' => t('Annotation Underline Colour'),
-      '#default_value' => ($config->get('recogito_integration.underline_colour') !== null) ? $config->get('recogito_integration.underline_colour') : [],
-    );
-    $underline_style_options = ['dotted' => 'dotted', 'dashed' => 'dashed', 'solid' => 'solid', 
-    'double' => 'double', 'groove' => 'groove', 'ridge' => 'ridge', 'inset' => 'inset', 
-    'outset' => 'outset', 'none' => 'none'];
-    $form['underline_style'] = [
-      '#type' => 'select',
-      '#title' => t('Underline Style'),
-      '#options' => $underline_style_options,
-      '#default_value' => ($config->get('recogito_integration.underline_style') !== null) ? $config->get('recogito_integration.underline_style') : [],
-    ];
-
-    if (($form_state->getValue('custom-annotation', NULL) === null && $config->get('recogito_integration.custom_dom') !== null && $config->get('recogito_integration.custom_dom') === 1) || $form_state->getValue('custom-annotation', NULL) === 1) {
-      $form['custom_mode_container']['textfields'] = [
-        '#type' => 'fieldset',
-        '#title' => $this->t("Custom annotation configuration for HTML elements"),
-      ];
-      $form['custom_mode_container']['textfields']['attach_attribute_name'] = [
-        '#type' => 'textarea',
-        '#title' => $this->t('List of specific DOM Element(s) to attach the Recogito JS library to:'),
-        '#default_value' => $config->get('recogito_integration.attach_attribute_name'),
-        '#description' => $this->t('<strong><u>Note:</u></strong> One element per line. If it\'s class name, use dot("."). If it\'s ID, use "#". <br /><strong>For example:</strong> <br />.content<br />.body<br />#article-1<br />#article-2'),
-      ];
-    }
-
-    /*$form['attach_attribute_type'] = [
-      '#type' => 'select',
-      '#title' => $this->t('Recogito Integration DOM Element Type:'),
-      '#options' => [
-        'id' => $this->t('id'),
-        'class' => $this->t('class'),
-      ],
-      '#default_value' => $config->get('recogito_integration.attach_attribute_type'),
-      '#description' => $this->t('The type of attribute to attach the recogito JS library to. May only be an id or a class.'),
-    ];
-
-    $form['attach_attribute_name'] = [
-      '#type' => 'textarea',
-      '#title' => $this->t('Recogito Integration DOM Element Name:'),
-      '#default_value' => $config->get('recogito_integration.attach_attribute_name'),
-      '#description' => $this->t('The name of the attribute to attach the recogito JS library to. Do not enter attribute identifiers such as . or #. For example, to attach to the class \'main\' you would enter \'main\'.'),
-    ];*/
-
-    /*$form['annotation_vocab_name'] = [
-     '#type' => 'textarea',
-     '#title' => $this->t('Annotation Vocabulary Name:'),
-     '#default_value' => $config->get('recogito_integration.annotation_vocab_name'),
-     '#description' => $this->t('The name of the vocabulary to pass annotation tags to and from. Leave blank if you do not wish to use this feature.'),
-   ];*/
-
-    /* Kyle replace preset dropdown list instead of text area for convenience */
-    $vocabularies = \Drupal\taxonomy\Entity\Vocabulary::loadMultiple();
-    $options_taxonomy = array();
-    foreach ($vocabularies as $vocal) {
-      $options_taxonomy[$vocal->id()] = $vocal->label();
-    }
-    /*$form['annotation_vocab_name'] = array(
-      '#type' => 'radios',
-      '#title' => $this->t('Annotation Vocabulary Name:'),
-      '#options' => $options_taxonomy,
-      '#default_value' => $config->get('recogito_integration.annotation_vocab_name'),
-      '#required' => true,
-    );*/
-
-
-
-    if (empty($form_state->getValue('annotation_vocab_name')) && empty($config->get('recogito_integration.annotation_vocab_name'))) {
-      // Use a default value.
-      $selected_vocalbulary = -1;
-    }
-    else {
-      // Get the value if it already exists.
-      if (!empty($form_state->getValue('annotation_vocab_name'))) {
-        $selected_vocalbulary = $form_state->getValue('annotation_vocab_name');
-      }
-      else if (!empty($config->get('recogito_integration.annotation_vocab_name'))) {
-        $selected_vocalbulary = $config->get('recogito_integration.annotation_vocab_name');
-      }
-    }
-
-    $form['annotation_vocab_name'] = [
-      '#type' => 'radios',
-      '#title' => $this->t('Annotation Vocabulary Name:'),
-      '#options' => $options_taxonomy,
-      //'#default_value' => $selected_vocalbulary,
-      '#default_value' => $config->get('recogito_integration.annotation_vocab_name'),
-      '#ajax' => [
-        'callback' => '::selectVocabularyCallback',
-        'wrapper' => 'instrument-fieldset-container',
-      ],
-    ];
-
-    $form['default_term_container'] = [
-      '#type' => 'container',
-      '#attributes' => ['id' => 'instrument-fieldset-container'],
-    ];
-    // Build the instrument field set.
-    $form['default_term_container']['default_term'] = [
-      '#type' => 'container',
-    ];
-    if ($selected_vocalbulary != -1) {
-      print_log($form_state->getValue('default_term'));
-      $form['default_term_container']['default_term']['default_term'] = [
-        '#type' => 'select',
-        '#title' => $this->t('Select a default tag:'),
-        '#options' => $this->getTermDropdownBySelectedVocal($selected_vocalbulary),
-        '#default_value' => !empty($config->get('recogito_integration.default_term')) ? $config->get('recogito_integration.default_term') : -1,
-        '#description' => $this->t('Select the default tag when create a new annotation')
-      ];
-    }
-
-    return $form;
-  }
-
-
-  /**
-   * Provide a new dropdown based on the AJAX call.
+   * Provide a selection form based on checked content type.
    *
-   * This callback will occur *after* the form has been rebuilt by buildForm().
-   * Since that's the case, the form should contain the right values for
-   * default_term.
+   * Callback occurs when a content type is checked.
    *
    * @param array $form
    *   An associative array containing the structure of the form.
@@ -232,90 +82,317 @@ class RecogitoIntegrationForm extends ConfigFormBase
    *   The current state of the form.
    *
    * @return array
-   *   The portion of the render structure that will replace the
-   *   instrument-dropdown-replace form element.
+   *   The field form element that will be inserted into the container.
    */
-  public function selectVocabularyCallback(array $form, FormStateInterface $form_state) {
-    return $form['default_term_container'];
+  public function contentTypesCallback(array &$form, FormStateInterface $form_state) {
+    $trigger_element = $form_state->getTriggeringElement();
+    $ct = $trigger_element['#ajax']['content_type'];
+    return $form['annotatables'][$ct . '_container'];
   }
 
-
-
   /**
-   * Helper function to populate the second dropdown.
+   * Provide a selection form based on selected vocabulary.
    *
-   * This would normally be pulling data from the database.
+   * Callback occurs when a vocabulary is selected.
    *
-   * @param string $key
-   *   This will determine which set of options is returned.
+   * @param array $form
+   *   An associative array containing the structure of the form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The current state of the form.
    *
    * @return array
-   *   Dropdown options
+   *   The field form element that will be inserted into the container.
    */
-  public function getTermDropdownBySelectedVocal($key = '') {
-    $terms =\Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($key);
-    $options = [-1 => '--- Select ---'];
-    foreach ($terms as $term) {
-      $options[$term->name] = $term->name;
+  public function vocabularyCallback(array &$form, FormStateInterface $form_state) {
+    return $form['tag_set']['default_term_container'];
+  }
+
+  /**
+   * Load fields for a given content type.
+   *
+   * @param string $ct
+   *   The content type to load fields for.
+   *
+   * @return array
+   *   An associative array of field names and labels.
+   */
+  public function loadFields(string $ct) {
+    $fields = $this->entityFieldManager->getFieldDefinitions('node', $ct);
+    $field_options = [];
+    foreach ($fields as $field_name) {
+      if ($field_name instanceof FieldConfig) {
+        $field_options[$field_name->getName()] = $field_name->getLabel();
+      }
     }
-    return $options;
+    return $field_options;
+  }
+
+  /**
+   * Load tags for a given vocabulary.
+   *
+   * @param string $vocabulary
+   *   The vocabulary to load tags for.
+   *
+   * @return array
+   *   An associative array of tag names and tids.
+   */
+  public function loadTags(string $vocabulary = '') {
+    if ($vocabulary === NULL) {
+      return [];
+    }
+    $tags = $this->entityTypeManager->getStorage('taxonomy_term')->loadTree($vocabulary);
+    $tag_options = [];
+    foreach ($tags as $tag) {
+      $tag_options[$tag->tid] = $tag->name;
+    }
+    return $tag_options;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function validateForm(array &$form, FormStateInterface $form_state)
-  {
-
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function submitForm(array &$form, FormStateInterface $form_state)
-  {
+  public function buildForm(array $form, FormStateInterface $form_state) {
+    $form = parent::buildForm($form, $form_state);
     $config = $this->config('recogito_integration.settings');
-    $config->set('recogito_integration.initialsetup', true);
-    if ($form_state->getValues()['custom-annotation'] === 1 && $form_state->getValue('attach_attribute_name') !== null)  {
-      $config->set('recogito_integration.attach_attribute_name', $form_state->getValue('attach_attribute_name'));
+    $content_types = $this->entityTypeManager->getStorage('node_type')->loadMultiple();
+    $ct_options = [];
+    foreach ($content_types as $ct) {
+      if (!in_array($ct->id(), [
+        'annotation_collection',
+        'annotation',
+        'annotation_textualbody',
+      ])) {
+        $ct_options[$ct->id()] = $ct->label();
+      }
     }
-    $config->set('recogito_integration.custom_dom', $form_state->getValues()['custom-annotation']);
-    if ($form_state->getValues()['custom-annotation'] === 0) {
-      $config->set('recogito_integration.attach_attribute_name', "");
+
+    $form['annotatables'] = [
+      '#type' => 'fieldset',
+      '#title' => $this->t('Annotatable Content'),
+      '#description' => $this->t('Select the content types and fields that should be annotatable.'),
+    ];
+
+    foreach ($ct_options as $ct => $label) {
+      $annotatables = $config->get('recogito_integration.annotatables') ?? [];
+      $contentSave = $annotatables[$ct] ?? [];
+      $form['annotatables'][$ct . '_annotatable'] = [
+        '#type' => 'checkbox',
+        '#title' => $this->t($label),
+        '#default_value' => $contentSave['enabled'] ?? 0,
+        '#ajax' => [
+          'callback' => '::contentTypesCallback',
+          'wrapper' => $ct . '_container',
+          'content_type' => $ct,
+        ],
+      ];
+
+      $form['annotatables'][$ct . '_container'] = [
+        '#type' => 'container',
+        '#attributes' => ['id' => $ct . '_container'],
+      ];
+
+      $current_value = $form_state->getValue($ct . '_annotatable');
+      $saved_value = $contentSave['enabled'];
+      if (($current_value === NULL && $saved_value ?? FALSE) || $current_value) {
+        $form['annotatables'][$ct . '_container'][$ct . '_annotatable_fields'] = [
+          '#type' => 'select',
+          '#title' => $this->t('Select fields to annotate'),
+          '#options' => $this->loadFields($ct),
+          '#multiple' => TRUE,
+          '#size' => 10,
+          '#default_value' => $contentSave['fields'] ?? [],
+        ];
+      }
     }
-    $config->set('recogito_integration.content-type-to-annotated', $form_state->getValues()['select-content-types']);
-    $config->set('recogito_integration.text_colour', $form_state->getValue('text_colour'));
-    $config->set('recogito_integration.background', $form_state->getValue('background'));
-    $config->set('recogito_integration.underline_thickness', $form_state->getValue('underline_thickness'));
+
+    $form['annotatables']['custom_annotations'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Enable custom annotation on HTML elements'),
+      '#default_value' => $config->get('recogito_integration.custom_annotations') ?? 0,
+    ];
+
+    $custom_description = '<strong><u>Note:</u></strong> One element per line. If it\'s class name, 
+    use dot("."). If it\'s ID, use "#". 
+    <br /><strong>For example:</strong>
+    <br />.content
+    <br />.body
+    <br />#article-1
+    <br />#article-2';
+    $form['annotatables']['custom_annotations_elements'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('List of specific HTML Element(s) to attach the Recogito JS library to:'),
+      '#default_value' => $config->get('recogito_integration.custom_annotations_elements') ?? '',
+      '#description' => $this->t($custom_description),
+      '#states' => [
+        'visible' => [
+          ':input[name="custom_annotations"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
+    $style_description = 'Set the default styles for annotations. Annotations without tags and 
+    style tags will inherit this style.';
+    $form['default_styles'] = [
+      '#type' => 'fieldset',
+      '#title' => $this->t('Default Styles for Annotations'),
+      '#description' => $this->t($style_description),
+    ];
+
+    $text_color_description = 'The color of the annotated text. If omitted, annotated text will be the 
+    same color as un-annotated text.';
+    $form['default_styles']['text_color'] = [
+      '#type' => 'color',
+      '#title' => $this->t('Annotation Text Color'),
+      '#description' => $this->t($text_color_description),
+      '#default_value' => $config->get('recogito_integration.text_color'),
+    ];
+
+    $form['default_styles']['background_color'] = [
+      '#type' => 'color',
+      '#title' => $this->t('Annotation Background Color'),
+      '#default_value' => $config->get('recogito_integration.background_color'),
+    ];
+
+    $background_transparency_description = 'Set the transparency of the annotation background color. 1 is 
+    fully opaque, 0 is fully transparent.';
+    $form['default_styles']['background_transparency'] = [
+      '#type' => 'number',
+      '#min' => 0,
+      '#max' => 1,
+      '#step' => 0.01,
+      '#title' => $this->t('Annotation Background Transparency'),
+      '#description' => $this->t($background_transparency_description),
+      '#default_value' => $config->get('recogito_integration.background_transparency') ?? 0,
+    ];
+
+    $form['default_styles']['underline_stroke'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Annotation Underline Stroke Size (px)'),
+      '#description' => $this->t('Choose 0 to omit any underlines.'),
+      '#min' => 0,
+      '#step' => 0.1,
+      '#default_value' => $config->get('recogito_integration.underline_stroke') ?? 0,
+    ];
+
+    $form['default_styles']['underline_color'] = [
+      '#type' => 'color',
+      '#title' => $this->t('Annotation Underline Color'),
+      '#default_value' => $config->get('recogito_integration.underline_color'),
+    ];
+
+    $form['default_styles']['underline_style'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Annotation Underline Style'),
+      '#options' => [
+        'dotted' => $this->t('Dotted'),
+        'dashed' => $this->t('Dashed'),
+        'double' => $this->t('Double'),
+        'solid' => $this->t('Solid'),
+        'groove' => $this->t('Groove'),
+        'ridge' => $this->t('Ridge'),
+        'inset' => $this->t('Inset'),
+        'outset' => $this->t('Outset'),
+        'none' => $this->t('None'),
+      ],
+      '#default_value' => $config->get('recogito_integration.underline_style') ?? 'none',
+    ];
+
+    $vocabularies = Vocabulary::loadMultiple();
+    $vocabulary_options = ['' => '-- Select --'];
+    foreach ($vocabularies as $vocabulary) {
+      $vocabulary_options[$vocabulary->id()] = $vocabulary->label();
+    }
+
+    $form['tag_set'] = [
+      '#type' => 'fieldset',
+      '#title' => $this->t('Pick a vocabulary to serve for tagging.'),
+    ];
+
+    $form['tag_set']['vocabulary_name'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Annotation Vocabulary Name'),
+      '#options' => $vocabulary_options,
+      '#default_value' => $config->get('recogito_integration.vocabulary_name') ?? '',
+      '#ajax' => [
+        'callback' => '::vocabularyCallback',
+        'wrapper' => 'default_term_container'
+      ],
+    ];
+
+    $form['tag_set']['default_term_container'] = [
+      '#type' => 'container',
+      '#attributes' => ['id' => 'default_term_container'],
+    ];
+
+    $current_value = $form_state->getValue('vocabulary_name');
+    $saved_value = $config->get('recogito_integration.vocabulary_name');
+    $selected_vocab = $current_value ?? $saved_value;
+    if (($current_value === NULL && $saved_value ?? FALSE) || $current_value) {
+      $form['tag_set']['default_term_container']['default_tag'] = [
+        '#type' => 'select',
+        '#multiple' => TRUE,
+        '#title' => $this->t('Select Default Tags'),
+        '#options' => $this->loadTags($selected_vocab),
+        '#default_value' => $config->get('recogito_integration.default_tag') ?? [],
+        '#description' => $this->t('Select the default tag assigned to newly created annotation!'),
+      ];
+    }
+
+    return $form;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+    $config = $this->config('recogito_integration.settings');
+    $content_types = $this->entityTypeManager->getStorage('node_type')->loadMultiple();
+    $config_content = $config->get('recogito_integration.annotatables') ?? [];
+    $config_new = [];
+    foreach ($content_types as $ct) {
+      $id = $ct->id();
+      if (!in_array($id, [
+        'annotation_collection',
+        'annotation',
+        'annotation_textualbody',
+      ])) {
+        $config_new[$id] = $config_content[$id] ?? [];
+        $config_new[$id]['enabled'] = $form_state->getValue($id . '_annotatable');
+        if ($config_new[$id]['enabled']) {
+          $config_new[$id]['fields'] = $form_state->getValue($id . '_annotatable_fields');
+        }
+        if (!isset($config_new[$id]['fields'])) {
+          $config_new[$id]['fields'] = [];
+        }
+      }
+    }
+    $config->set('recogito_integration.annotatables', $config_new);
+    $config->set('recogito_integration.custom_annotations', $form_state->getValue('custom_annotations'));
+    if ($form_state->getValue('custom_annotations')) {
+      $config->set('recogito_integration.custom_annotations_elements', $form_state->getValue('custom_annotations_elements'));
+    }
+    $config->set('recogito_integration.text_color', $form_state->getValue('text_color'));
+    $config->set('recogito_integration.background_color', $form_state->getValue('background_color'));
     $config->set('recogito_integration.background_transparency', $form_state->getValue('background_transparency'));
+    $config->set('recogito_integration.underline_stroke', $form_state->getValue('underline_stroke'));
+    $config->set('recogito_integration.underline_color', $form_state->getValue('underline_color'));
     $config->set('recogito_integration.underline_style', $form_state->getValue('underline_style'));
-    $config->set('recogito_integration.underline_colour', $form_state->getValue('underline_colour'));
-    $config->set('recogito_integration.annotation_vocab_name', $form_state->getValue('annotation_vocab_name'));
-    $config->set('recogito_integration.default_term', $form_state->getValue('default_term'));
+    $config->set('recogito_integration.vocabulary_name', $form_state->getValue('vocabulary_name'));
+    $config->set('recogito_integration.default_tag', $form_state->getValue('default_tag') ?? []);
     $config->save();
+    if ($config_new != $config_content) {
+      $this->cacheTagsInvalidator->invalidateTags(['rendered']);
+    }
     return parent::submitForm($form, $form_state);
   }
 
   /**
    * {@inheritdoc}
    */
-  protected function getEditableConfigNames()
-  {
+  protected function getEditableConfigNames() {
     return [
       'recogito_integration.settings',
     ];
   }
-
-  /**
-   * Callback for ajax_example_autotextfields.
-   *
-   * Selects the piece of the form we want to use as replacement markup and
-   * returns it as a form (renderable array).
-   */
-  public function customModeCallback($form, FormStateInterface $form_state)
-  {
-    return $form['custom_mode_container'];
-  }
-
 
 }

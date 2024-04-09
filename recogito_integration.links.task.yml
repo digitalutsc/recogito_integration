@@ -1,0 +1,4 @@
+recogito_annotate_node:
+  route_name: recogito_annotate_node
+  base_route: entity.node.canonical
+  title: 'Annotate'

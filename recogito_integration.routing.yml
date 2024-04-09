@@ -40,3 +40,14 @@ recogito_settings:
 
 recogito_admin_manage:
   path: '/admin/content/annotation/collection'
+
+recogito_annotate_node:
+  path: '/node/{node}/annotate'
+  defaults:
+    _controller: '\Drupal\recogito_integration\Controller\RecogitoIntegrationController::annotationsPage'
+  requirements:
+    _custom_access: '\Drupal\recogito_integration\Controller\RecogitoIntegrationController::access'
+  options:
+    parameters:
+      node:
+        type: 'entity:node'
