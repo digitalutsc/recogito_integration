@@ -359,7 +359,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
         $config_new[$id] = $config_content[$id] ?? [];
         $config_new[$id]['enabled'] = $form_state->getValue($id . '_annotatable') ?? 0;
         if ($config_new[$id]['enabled']) {
-          $config_new[$id]['fields'] = $form_state->getValue($id . '_annotatable_fields');
+          $config_new[$id]['fields'] = $form_state->getValue($id . '_annotatable_fields') ?? [];
         }
         if (!isset($config_new[$id]['fields'])) {
           $config_new[$id]['fields'] = [];
