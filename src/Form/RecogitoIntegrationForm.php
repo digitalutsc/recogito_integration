@@ -238,15 +238,6 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       '#description' => $this->t($style_description),
     ];
 
-    $text_color_description = 'The color of the annotated text. If omitted, annotated text will be the 
-    same color as un-annotated text.';
-    $form['default_styles']['text_color'] = [
-      '#type' => 'color',
-      '#title' => $this->t('Annotation Text Color'),
-      '#description' => $this->t($text_color_description),
-      '#default_value' => $config->get('recogito_integration.text_color'),
-    ];
-
     $form['default_styles']['background_color'] = [
       '#type' => 'color',
       '#title' => $this->t('Annotation Background Color'),
@@ -265,6 +256,21 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       '#default_value' => $config->get('recogito_integration.background_transparency') ?? 0,
     ];
 
+    $text_color_description = 'The color of the annotated text. If omitted, annotated text will be the 
+    same color as un-annotated text.';
+    $form['default_styles']['text_color'] = [
+      '#type' => 'color',
+      '#title' => $this->t('Annotation Text Color'),
+      '#description' => $this->t($text_color_description),
+      '#default_value' => $config->get('recogito_integration.text_color'),
+    ];
+
+    $form['default_styles']['underline_color'] = [
+      '#type' => 'color',
+      '#title' => $this->t('Annotation Underline Color'),
+      '#default_value' => $config->get('recogito_integration.underline_color'),
+    ];
+
     $form['default_styles']['underline_stroke'] = [
       '#type' => 'number',
       '#title' => $this->t('Annotation Underline Stroke Size (px)'),
@@ -272,12 +278,6 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       '#min' => 0,
       '#step' => 0.1,
       '#default_value' => $config->get('recogito_integration.underline_stroke') ?? 0,
-    ];
-
-    $form['default_styles']['underline_color'] = [
-      '#type' => 'color',
-      '#title' => $this->t('Annotation Underline Color'),
-      '#default_value' => $config->get('recogito_integration.underline_color'),
     ];
 
     $form['default_styles']['underline_style'] = [
@@ -371,11 +371,11 @@ class RecogitoIntegrationForm extends ConfigFormBase {
     if ($form_state->getValue('custom_annotations')) {
       $config->set('recogito_integration.custom_annotations_elements', $form_state->getValue('custom_annotations_elements'));
     }
-    $config->set('recogito_integration.text_color', $form_state->getValue('text_color'));
     $config->set('recogito_integration.background_color', $form_state->getValue('background_color'));
     $config->set('recogito_integration.background_transparency', $form_state->getValue('background_transparency'));
-    $config->set('recogito_integration.underline_stroke', $form_state->getValue('underline_stroke'));
+    $config->set('recogito_integration.text_color', $form_state->getValue('text_color'));
     $config->set('recogito_integration.underline_color', $form_state->getValue('underline_color'));
+    $config->set('recogito_integration.underline_stroke', $form_state->getValue('underline_stroke'));
     $config->set('recogito_integration.underline_style', $form_state->getValue('underline_style'));
     $config->set('recogito_integration.vocabulary_name', $form_state->getValue('vocabulary_name'));
     $config->set('recogito_integration.default_tag', $form_state->getValue('default_tag') ?? []);
