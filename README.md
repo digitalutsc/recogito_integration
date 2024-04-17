@@ -10,7 +10,7 @@
  - Annotate non-field elements on the page by adding its HTML attributes
 
 ### Configuration
- The config is located in `/admin/config/development/recogito_integration`. To allow any form of annotation, please scroll down and select a vocabulary (preferably a new vocabulary) to allow the module to function. 
+The config is located in `/admin/config/development/recogito_integration`. To allow any form of annotation, please scroll down and select a vocabulary (preferably a new vocabulary) to allow the module to function. The configuration is straightforward, if you like to have a content type to be annotatable, simply check the checkbox for that type and pick the fields to be annotatable.
 
 ### Tag Profiling
 - Go to the Vocabulary that is set in the config for tags
