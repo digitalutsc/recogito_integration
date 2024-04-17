@@ -628,7 +628,7 @@ display:
         - user.permissions
       max-age: 0
       tags: {  }
-  page_1:
+  page_annotations:
     display_options:
       path: admin/content/annotation/collection/%
       menu:
@@ -1305,7 +1305,7 @@ display:
       enabled: true
     display_plugin: page
     display_title: 'Annotation Page'
-    id: page_1
+    id: page_annotations
     position: 1
     cache_metadata:
       contexts:
@@ -1319,7 +1319,7 @@ display:
       max-age: 0
       tags:
         - 'config:field.storage.node.field_annotation_page'
-  page_2:
+  page_textualbody_annotations:
     display_options:
       path: admin/content/annotation/%/textualBody
       menu:
@@ -2002,7 +2002,7 @@ display:
           plugin_id: standard
     display_plugin: page
     display_title: 'Annotation TextualBody Page'
-    id: page_2
+    id: page_textualbody_annotations
     position: 1
     cache_metadata:
       contexts:
@@ -2016,7 +2016,7 @@ display:
       max-age: 0
       tags:
         - 'config:field.storage.node.field_annotation_target'
-  page_annotation:
+  page_collection_annotations:
     display_options:
       path: admin/content/annotation/collection
       menu:
@@ -2585,7 +2585,7 @@ display:
           entity_field: status
     display_plugin: page
     display_title: 'Annotation Collection Page'
-    id: page_annotation
+    id: page_collection_annotations
     position: 1
     cache_metadata:
       contexts:

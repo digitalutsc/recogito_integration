@@ -10,6 +10,7 @@ dependencies:
     - field.field.node.annotation.field_annotation_target_end
     - field.field.node.annotation.field_annotation_target_exact
     - field.field.node.annotation.field_annotation_target_start
+    - field.field.node.annotation.field_annotation_target_element
     - field.field.node.annotation.field_annotation_textualbodies
     - field.field.node.annotation.field_annotation_type
     - node.type.annotation
@@ -41,6 +42,13 @@ content:
   field_annotation_target_exact:
     type: basic_string
     weight: 1
+    region: content
+    label: inline
+    settings: {  }
+    third_party_settings: {  }
+  field_annotation_target_element:
+    type: basic_string
+    weight: 5
     region: content
     label: inline
     settings: {  }

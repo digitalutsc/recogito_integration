@@ -9,6 +9,7 @@ dependencies:
     - field.field.node.annotation_textualbody.field_annotation_purpose
     - field.field.node.annotation_textualbody.field_annotation_target
     - field.field.node.annotation_textualbody.field_annotation_value
+    - field.field.node.annotation_textualbody.field_annotation_tag_reference
     - node.type.annotation_textualbody
   enforced:
     module:
@@ -68,6 +69,16 @@ content:
     region: content
   field_annotation_target:
     weight: 127
+    settings:
+      match_operator: CONTAINS
+      match_limit: 10
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+    type: entity_reference_autocomplete
+    region: content
+  field_annotation_tag_reference:
+    weight: 128
     settings:
       match_operator: CONTAINS
       match_limit: 10

@@ -2,14 +2,18 @@
 
 namespace Drupal\recogito_integration\Controller;
 
-use Drupal\Core\Controller\ControllerBase;
-use Drupal\Core\Session\AccountInterface;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\node\NodeInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\Core\Access\AccessResult;
 
+/**
+ * Controller for Recogito Integration's annotate page for nodes.
+ */
 class RecogitoIntegrationController extends ControllerBase {
   /**
    * The entity type manager.
@@ -25,16 +29,29 @@ class RecogitoIntegrationController extends ControllerBase {
   protected $configFactory;
 
   /**
+   * The current user.
+   *
+   * @var \Drupal\Core\Session\AccountProxyInterface
+   */
+  protected $currentUser;
+
+  /**
    * Constructs a new RecogitoIntegrationController object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   The entity type manager service.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The configuration factory service.
+   * @param \Drupal\Core\Session\AccountProxyInterface $current_user
+   *   The current user.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, ConfigFactoryInterface $config_factory) {
+  public function __construct(
+    EntityTypeManagerInterface $entity_type_manager,
+    ConfigFactoryInterface $config_factory,
+    AccountProxyInterface $current_user) {
     $this->entityTypeManager = $entity_type_manager;
     $this->configFactory = $config_factory;
+    $this->currentUser = $current_user;
   }
 
   /**
@@ -43,7 +60,8 @@ class RecogitoIntegrationController extends ControllerBase {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('entity_type.manager'),
-      $container->get('config.factory')
+      $container->get('config.factory'),
+      $container->get('current_user')
     );
   }
 
@@ -58,7 +76,8 @@ class RecogitoIntegrationController extends ControllerBase {
    */
   public function annotationsPage(NodeInterface $node) {
     $build = $this->entityTypeManager->getViewBuilder('node')->view($node, 'full');
-    $build['#title'] = $node->getTitle() . ' - Annotation Mode';
+    $build['#title'] = $node->getTitle();
+    $build['#cache']['max-age'] = 0;
     return $build;
   }
 
@@ -80,6 +99,7 @@ class RecogitoIntegrationController extends ControllerBase {
       return AccessResult::allowedIf(FALSE)->addCacheableDependency($config);
     }
     $access = $annotatables[$node->getType()]['enabled'] ?? FALSE;
+    $access = $access && $this->currentUser->hasPermission('recogito create annotations');
     return AccessResult::allowedIf($access)->addCacheableDependency($config);
   }
 

@@ -26,20 +26,20 @@ class AnnotationProfileWidget extends WidgetBase {
     $field_name = $items->getName();
     $element['styling_choice'] = [
       '#type' => 'select',
-      '#title' => t('Styling Choice'),
+      '#title' => $this->t('Styling Choice'),
       '#options' => [
-        0 => t('No Style'),
-        1 => t('Custom Style'),
+        0 => $this->t('No Style'),
+        1 => $this->t('Custom Style'),
       ],
       '#default_value' => $items[$delta]->styling_choice ?? 0,
-      '#description' => t('Choose the styling option.'),
+      '#description' => $this->t('Choose the styling option.'),
     ];
 
     $element['styling_weight'] = [
       '#type' => 'number',
-      '#title' => t('Styling Weight'),
+      '#title' => $this->t('Styling Weight'),
       '#default_value' => $items[$delta]->styling_weight ?? 0,
-      '#description' => t('Lower the weight the higher priority it is going to be used over other tags!'),
+      '#description' => $this->t('Lower the weight the higher priority it is going to be used over other tags!'),
       '#states' => [
         'visible' => [
           ':input[name="' . $field_name . '[' . $delta . '][styling_choice]"]' => ['!value' => '0'],
@@ -49,7 +49,7 @@ class AnnotationProfileWidget extends WidgetBase {
 
     $element['custom_style'] = [
       '#type' => 'fieldset',
-      '#title' => t('Custom Style'),
+      '#title' => $this->t('Custom Style'),
       '#states' => [
         'visible' => [
           ':input[name="' . $field_name . '[' . $delta . '][styling_choice]"]' => ['!value' => '0'],
@@ -59,58 +59,58 @@ class AnnotationProfileWidget extends WidgetBase {
 
     $element['custom_style']['background_color'] = [
       '#type' => 'color',
-      '#title' => t('Background Color'),
+      '#title' => $this->t('Background Color'),
       '#default_value' => $items[$delta]->background_color ?? '#ffffff',
-      '#description' => t('Choose a background color.'),
+      '#description' => $this->t('Choose a background color.'),
     ];
 
     $element['custom_style']['background_transparency'] = [
       '#type' => 'number',
-      '#title' => t('Background Transparency'),
+      '#title' => $this->t('Background Transparency'),
       '#default_value' => $items[$delta]->background_transparency ?? 0,
       '#min' => 0,
       '#max' => 1,
       '#step' => 0.01,
-      '#description' => t('Set the background transparency between 0 and 1.'),
+      '#description' => $this->t('Set the background transparency between 0 and 1.'),
     ];
 
     $element['custom_style']['text_color'] = [
       '#type' => 'color',
-      '#title' => t('Text Color'),
+      '#title' => $this->t('Text Color'),
       '#default_value' => $items[$delta]->text_color ?? '#ffffff',
-      '#description' => t('Choose a text color.'),
+      '#description' => $this->t('Choose a text color.'),
     ];
 
     $element['custom_style']['underline_color'] = [
       '#type' => 'color',
-      '#title' => t('Underline Color'),
+      '#title' => $this->t('Underline Color'),
       '#default_value' => $items[$delta]->underline_color ?? '#ffffff',
-      '#description' => t('Choose an underline color.'),
+      '#description' => $this->t('Choose an underline color.'),
     ];
 
     $element['custom_style']['underline_stroke'] = [
       '#type' => 'number',
-      '#title' => t('Underline Stroke'),
+      '#title' => $this->t('Underline Stroke'),
       '#default_value' => $items[$delta]->underline_stroke ?? 0,
-      '#description' => t('Enter the underline stroke (px).'),
+      '#description' => $this->t('Enter the underline stroke (px).'),
     ];
 
     $element['custom_style']['underline_style'] = [
       '#type' => 'select',
-      '#title' => t('Underline Style'),
+      '#title' => $this->t('Underline Style'),
       '#options' => [
-        'dotted' => t('Dotted'),
-        'dashed' => t('Dashed'),
-        'double' => t('Double'),
-        'solid' => t('Solid'),
-        'groove' => t('Groove'),
-        'ridge' => t('Ridge'),
-        'inset' => t('Inset'),
-        'outset' => t('Outset'),
-        'none' => t('None'),
+        'dotted' => $this->t('Dotted'),
+        'dashed' => $this->t('Dashed'),
+        'double' => $this->t('Double'),
+        'solid' => $this->t('Solid'),
+        'groove' => $this->t('Groove'),
+        'ridge' => $this->t('Ridge'),
+        'inset' => $this->t('Inset'),
+        'outset' => $this->t('Outset'),
+        'none' => $this->t('None'),
       ],
       '#default_value' => $items[$delta]->underline_style ?? 'none',
-      '#description' => t('Select the underline style.'),
+      '#description' => $this->t('Select the underline style.'),
     ];
     return $element;
   }

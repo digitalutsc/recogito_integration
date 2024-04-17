@@ -8,6 +8,7 @@ dependencies:
     - field.field.node.annotation.field_annotation_page
     - field.field.node.annotation.field_annotation_target_end
     - field.field.node.annotation.field_annotation_target_exact
+    - field.field.node.annotation.field_annotation_target_element
     - field.field.node.annotation.field_annotation_target_start
     - field.field.node.annotation.field_annotation_textualbodies
     - field.field.node.annotation.field_annotation_type
@@ -62,6 +63,13 @@ content:
     region: content
   field_annotation_target_exact:
     weight: 2
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    type: basic_string
+    region: content
+  field_annotation_target_element:
+    weight: 10
     label: above
     settings: {  }
     third_party_settings: {  }

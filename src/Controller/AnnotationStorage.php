@@ -2,15 +2,16 @@
 
 namespace Drupal\recogito_integration\Controller;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Entity\EntityFieldManagerInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\node\Entity\Node;
 use Drupal\taxonomy\Entity\Term;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Masterminds\HTML5\Exception;
-use GuzzleHttp\Exception\RequestException;
-use Symfony\Component\HttpFoundation\Request;
-use Drupal\Core\Session\AccountProxyInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Controller for Recogito JS operations on annotations and related content.
@@ -25,13 +26,47 @@ class AnnotationStorage extends ControllerBase {
   protected $currentUser;
 
   /**
-   * Constructs a new YourController.
+   * The config factory.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
+
+  /**
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
+   * The entity field manager.
+   *
+   * @var \Drupal\Core\Entity\EntityFieldManagerInterface
+   */
+  protected $entityFieldManager;
+
+  /**
+   * Constructs a new Annotation Storage Controller.
    *
    * @param \Drupal\Core\Session\AccountProxyInterface $current_user
    *   The current user.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The entity type manager.
+   * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager
+   *   The entity field manager.
    */
-  public function __construct(AccountProxyInterface $current_user) {
+  public function __construct(
+    AccountProxyInterface $current_user,
+    ConfigFactoryInterface $config_factory,
+    EntityTypeManagerInterface $entity_type_manager,
+    EntityFieldManagerInterface $entity_field_manager) {
     $this->currentUser = $current_user;
+    $this->configFactory = $config_factory;
+    $this->entityTypeManager = $entity_type_manager;
+    $this->entityFieldManager = $entity_field_manager;
   }
 
   /**
@@ -39,477 +74,467 @@ class AnnotationStorage extends ControllerBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('current_user')
+      $container->get('current_user'),
+      $container->get('config.factory'),
+      $container->get('entity_type.manager'),
+      $container->get('entity_field.manager')
     );
   }
 
   /**
-  * Creates an annotation from data provided by the HTTP request.
-  * @return JsonResponse Annotation status after running function
-  */
-  public function createAnnotation(Request $request) {
-    #Check permissions
-    if (!$this->currentUser->hasPermission('recogito create annotations')) {
-      return JsonResponse::fromJsonString(json_encode("Insufficient permissions - User cannot create annotations"));
-    }
-    $test = \Drupal::request()->server;
-    $page_url = \Drupal::request()->server->get('HTTP_PAGEURL');
-    $annotation = json_decode(\Drupal::request()->server->get('HTTP_ANNOTATIONOBJ'));
-    #Create annotation
-    self::createNewAnnotationNode($annotation);
-    $annotation_node = self::queryAnnotationNode($annotation->id);
-    $annotation_collection_node = self::queryAnnotationCollectionNode($page_url);
-    #If annotation collection for this page doesn't exist, then create one
-    if (!isset($annotation_collection_node)) {
-      self::createNewAnnotationCollectionNode($page_url);
-      $annotation_collection_node = self::queryAnnotationCollectionNode($page_url);
-    }
-    #Add annotation reference to the annotation collection
-    self::AnnotationCollectionAddAnnotation($annotation_collection_node, $annotation_node);
-    return JsonResponse::fromJsonString(json_encode("Successful annotation creation"));
-  }
-
-  public function constructStyle($tag_terms, $field_definitions) {
-    $config = \Drupal::config('recogito_integration.settings');
-    $style = array(
-      'text_color' => $config->get('recogito_integration.text_colour'),
-      'background' => $config->get('recogito_integration.background'),
-      'underline_style' => $config->get('recogito_integration.underline_style'),
-      'underline_thickness' => $config->get('recogito_integration.underline_thickness'),
-      'underline_color' => $config->get('recogito_integration.underline_colour'),
-      'background_transparency' => $config->get('recogito_integration.background_transparency'),
-    );
-    if (!$tag_terms) {
+   * Constructs the style for an annotation based on its tags.
+   *
+   * @param array $tags
+   *   The tags associated with the annotation.
+   *
+   * @return array
+   *   The style for the annotation.
+   */
+  public function constructStyle(array $tags) {
+    $config = $this->configFactory->get('recogito_integration.settings');
+    $style = [
+      'text_color' => $config->get('recogito_integration.text_color') ?? '#000000',
+      'background_color' => $config->get('recogito_integration.background_color') ?? '#000000',
+      'underline_color' => $config->get('recogito_integration.underline_color') ?? '#000000',
+      'underline_style' => $config->get('recogito_integration.underline_style') ?? 'none',
+      'underline_stroke' => $config->get('recogito_integration.underline_stroke') ?? '0',
+      'background_transparency' => $config->get('recogito_integration.background_transparency') ?? '0',
+    ];
+    if (!$tags) {
       return $style;
     }
-    $style_field = "";
-    foreach ($field_definitions as $field_name => $field_definition) {
-      if ($field_definition->getType() === 'annotation_profile') {
-        $style_field = $field_name;
-        break;
+    $style_field = [];
+    $min = reset($tags);
+    foreach ($tags as $tag) {
+      $vocabulary = $tag->bundle();
+      if (!isset($style_field[$vocabulary])) {
+        $field_definitions = $this->entityFieldManager->getFieldDefinitions('taxonomy_term', $vocabulary);
+        foreach ($field_definitions as $field_name => $field_definition) {
+          if ($field_definition->getType() === 'annotation_profile') {
+            $style_field[$vocabulary] = $field_name;
+            break;
+          }
+        }
+        if (!isset($style_field[$vocabulary])) {
+          $style_field[$vocabulary] = '';
+        }
+      }
+      if (empty($style_field[$vocabulary])) {
+        continue;
+      }
+      $min_field = $style_field[$min->bundle()];
+      $tag_field = $style_field[$vocabulary];
+
+      $min_style = $min->get($min_field)->getValue();
+      $tag_style = $tag->get($tag_field)->getValue();
+      if (empty($min_style) || isset($tag_style) && $min_style[0]['styling_choice'] == '0') {
+        $min = $tag;
+      }
+      elseif (!empty($tag_style) && $tag_style[0]['styling_choice'] == '1' && $tag_style[0]['styling_weight'] < $min_style[0]['styling_weight']) {
+        $min = $tag;
       }
     }
-    if (!empty($style_field)) {
-      $min = reset($tag_terms);
-      foreach ($tag_terms as $tag) {
-        $min_style = $min->get($style_field)->getValue();
-        $tag_style = $tag->get($style_field)->getValue();
-        if (empty($min_style) || isset($tag_style) && $min_style[0]['styling_choice'] == '0') {
-          $min = $tag;
-        }
-        elseif (!empty($tag_style) && $tag_style[0]['styling_choice'] == '1' && $tag_style[0]['styling_weight'] < $min_style[0]['styling_weight']) {
-          $min = $tag;
-        }
-      }
-      $min_style = $min->get($style_field)->getValue();
-      if (!empty($min_style) && $min_style[0]['styling_choice'] == '1') {
-        $style = array(
-          'text_color' => $min_style[0]['text_color'],
-          'background' => $min_style[0]['background_color'],
-          'underline_style' => $min_style[0]['underline_style'],
-          'underline_thickness' => $min_style[0]['underline_stroke'],
-          'underline_color' => $min_style[0]['underline_color'],
-          'background_transparency' => $min_style[0]['background_transparency'],
-        );
-      }
+    $min_field = $style_field[$min->bundle()];
+    if (empty($min_field)) {
+      return $style;
+    }
+    $min_style = $min->get($min_field)->getValue();
+    if (!empty($min_style) && $min_style[0]['styling_choice'] == '1') {
+      $style = [
+        'text_color' => $min_style[0]['text_color'],
+        'background_color' => $min_style[0]['background_color'],
+        'underline_style' => $min_style[0]['underline_style'],
+        'underline_stroke' => $min_style[0]['underline_stroke'],
+        'underline_color' => $min_style[0]['underline_color'],
+        'background_transparency' => $min_style[0]['background_transparency'],
+      ];
     }
     return $style;
   }
 
   /**
-  * Get an array of all annotation objects stored at the page provided by the HTTP request.
-  * @return JsonResponse Annotation status after running function, or list of annotation objects if successful.
-  */
-  public function readAnnotations() {
-    #Check permissions
-    if (!\Drupal::currentUser()->hasPermission('recogito view annotations')) {
-      return JsonResponse::fromJsonString(json_encode("Insufficient permissions - User cannot view annotations"));
+   * Retrieves annotations for a given page URL (URL in header).
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request object.
+   *
+   * @return \Symfony\Component\HttpFoundation\JsonResponse
+   *   The JSON response containing the annotations.
+   */
+  public function getAnnotations(Request $request) {
+    $user = $this->currentUser;
+    if (!$user->hasPermission('recogito view annotations')) {
+      return new JsonResponse('Insufficient permissions - User cannot view annotations.', 403);
     }
-    $page_url = \Drupal::request()->server->get('HTTP_PAGEURL');
-    $annotation_collection_node = self::queryAnnotationCollectionNode($page_url);
-    if (!isset($annotation_collection_node)) {
-      return new JsonResponse();
+    $pageUrl = $request->headers->get('pageurl');
+    $collectionNode = self::queryAnnotationCollectionNode($pageUrl);
+    if (!$collectionNode) {
+      return new JsonResponse(json_encode([]), 200);
     }
-    #Get array of all references to annotations on this page
-    $annotation_references = $annotation_collection_node->get('field_annotation_reference');
-    $config = \Drupal::config('recogito_integration.settings');
-    $tax_terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
-    $tax_vocab = $config->get('recogito_integration.annotation_vocab_name');
-    $field_definitions = \Drupal::service('entity_field.manager')->getFieldStorageDefinitions('taxonomy_term', $tax_vocab);
-    #Create object to store & return all annotations on page
-    $annotation_array = array();
-    foreach($annotation_references->referencedEntities() as $annotation_node) {
-      $textualbodies = array();
-      $tag_terms = array();
-      foreach($annotation_node->get('field_annotation_textualbodies')->referencedEntities() as $textualbody) {
-        if ($textualbody->get('field_annotation_purpose')->getValue()[0]['value'] === "tagging") {
-          $terms = $tax_terms->loadByProperties(['name' => $textualbody->get('field_annotation_value')->getValue()[0]['value'], 'vid' => $tax_vocab]);
-          if (empty($terms)) {
-            continue;
+    $annotationData = [];
+    $annotations = $collectionNode->get('field_annotation_reference')->referencedEntities();
+    foreach ($annotations as $annotation) {
+      $textualbodies = [];
+      $tags = [];
+      $textualbodyNodes = $annotation->get('field_annotation_textualbodies')->referencedEntities();
+      foreach ($textualbodyNodes as $textualbody) {
+        $bodyContent = [
+          'created' => $textualbody->get('field_annotation_created')->getString(),
+          'creator' => [
+            'id' => $textualbody->get('field_annotation_creator_id')->getString(),
+            'name' => $textualbody->get('field_annotation_creator_name')->getString(),
+          ],
+          'modified' => $textualbody->get('field_annotation_modified')->getString(),
+          'purpose' => $textualbody->get('field_annotation_purpose')->getString(),
+        ];
+        if ($textualbody->get('field_annotation_purpose')->getString() === 'tagging') {
+          $terms = $textualbody->get('field_annotation_tag_reference')->referencedEntities();
+          $tag = reset($terms);
+          if ($terms) {
+            $tags[] = $tag;
+            $bodyContent['value'] = $tag->getName();
           }
-          $tag_terms[] = reset($terms);
         }
-        $textualbodies[] = array(
-          'created' => $textualbody->get('field_annotation_created')->getValue(),
-          'creator_id' => $textualbody->get('field_annotation_creator_id')->getValue(),
-          'creator_name' => $textualbody->get('field_annotation_creator_name')->getValue(),
-          'modified' => $textualbody->get('field_annotation_modified')->getValue(),
-          'purpose' => $textualbody->get('field_annotation_purpose')->getValue(),
-          'value' => $textualbody->get('field_annotation_value')->getValue(),
-        );
+        else {
+          $bodyContent['value'] = $textualbody->get('field_annotation_value')->getString();
+        }
+        $textualbodies[] = $bodyContent;
       }
-      $style = self::constructStyle($tag_terms, $field_definitions);
-      $annotation_object = array(
-        'id' => $annotation_node->get('field_annotation_id')->getValue(),
-        'target_end' => $annotation_node->get('field_annotation_target_end')->getValue(),
-        'target_exact' => $annotation_node->get('field_annotation_target_exact')->getValue(),
-        'target_start' => $annotation_node->get('field_annotation_target_start')->getValue(),
-        'target_element' => $annotation_node->get('field_annotation_target_element')->getValue(),
-        'style' => $style,
+      $style = self::constructStyle($tags);
+      $data = [
+        'id' => $annotation->get('field_annotation_id')->getString(),
         'textualbodies' => $textualbodies,
-      );
-      if ($annotation_node->get('field_annotation_type')->getValue()[0]["value"] == "Selection") {
-        $annotation_object['image_source'] = $annotation_node->get('field_annotation_image_source')->getValue();
-        $annotation_object['image_value'] = $annotation_node->get('field_annotation_image_value')->getValue();
-      } else {
-        $annotation_object['target_end'] =  $annotation_node->get('field_annotation_target_end')->getValue();
-        $annotation_object['target_exact'] = $annotation_node->get('field_annotation_target_exact')->getValue();
-        $annotation_object['target_start'] = $annotation_node->get('field_annotation_target_start')->getValue();
+        'target_element' => $annotation->get('field_annotation_target_element')->getString(),
+        'type' => $annotation->get('field_annotation_type')->getString(),
+      ];
+      switch ($data['type']) {
+        case 'Selection':
+          $data['image_source'] = $annotation->get('field_annotation_image_source')->getString();
+          $data['image_value'] = $annotation->get('field_annotation_image_value')->getString();
+          break;
+
+        case 'Annotation':
+          $data['target_end'] = $annotation->get('field_annotation_target_end')->getString();
+          $data['target_exact'] = $annotation->get('field_annotation_target_exact')->getString();
+          $data['target_start'] = $annotation->get('field_annotation_target_start')->getString();
+          $data['style'] = $style;
+          break;
       }
-      $annotation_object['type'] = $annotation_node->get('field_annotation_type')->getValue();
-      $annotation_array[] = $annotation_object;
+      $annotationData[] = $data;
     }
-    return JsonResponse::fromJsonString(json_encode($annotation_array));
+    return new JsonResponse(json_encode($annotationData), 200);
   }
 
   /**
-  * Given an annotation object, update a stored object with matching ids
-  * @return JsonResponse Annotation status after running function
-  */
-  public function updateAnnotation() {
-    $annotation = json_decode(\Drupal::request()->server->get('HTTP_ANNOTATIONOBJ'));
-    $annotation_node = self::queryAnnotationNode($annotation->id);
-    if (!isset($annotation_node)) {
-      return JsonResponse::fromJsonString(json_encode("Nonexistent annotation ID"));
+   * Creates an annotation based on the request body.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request object.
+   *
+   * @return \Symfony\Component\HttpFoundation\JsonResponse
+   *   The JSON response containing the status of the operation.
+   */
+  public function createAnnotation(Request $request) {
+    $user = $this->currentUser;
+    if (!$user->hasPermission('recogito create annotations')) {
+      return new JsonResponse('Insufficient permissions - User cannot create annotations.', 403);
     }
-    #Check permissions
-    foreach(Node::load($annotation_node)->get('field_annotation_textualbodies')->referencedEntities() as $oldtextualbody) {
-      unset($annotationfound);
-      foreach($annotation->textualbodies as $newtextualbody) {
-        if ($oldtextualbody->get('field_annotation_created')->getValue()[0]["value"] == $newtextualbody->created) {
-          $newtextualbody->edited = true;
-          $annotationfound = true;
-          if ($oldtextualbody->get('field_annotation_value')->getValue()[0]["value"] != $newtextualbody->value) {
-            if ($oldtextualbody->get('field_annotation_creator_name')->getValue()[0]["value"] == \Drupal::currentUser()->getDisplayName()) {
-              if (!\Drupal::currentUser()->hasPermission('recogito edit own annotations') && !\Drupal::currentUser()->hasPermission('recogito edit annotations')) {
-                return JsonResponse::fromJsonString(json_encode("Insufficient permissions - User cannot edit own annotations"));
-              }
-            } else if (!\Drupal::currentUser()->hasPermission('recogito edit annotations')) {
-              return JsonResponse::fromJsonString(json_encode("Insufficient permissions - User cannot edit annotations"));
-            }
-          }
-        }
-      }
-      if (!isset($annotationfound)) {
-        if ($oldtextualbody->get('field_annotation_creator_name')->getValue()[0]["value"] == \Drupal::currentUser()->getDisplayName()) {
-          if (!\Drupal::currentUser()->hasPermission('recogito delete own annotations') && !\Drupal::currentUser()->hasPermission('recogito delete annotations')) {
-            return JsonResponse::fromJsonString(json_encode("Insufficient permissions - User cannot delete own annotations"));
-          }
-        } else if (!\Drupal::currentUser()->hasPermission('recogito delete annotations')) {
-          return JsonResponse::fromJsonString(json_encode("Insufficient permissions - User cannot delete annotations"));
-        }
-      }
+    $config = $this->configFactory->get('recogito_integration.settings');
+    $vocabulary = $config->get('recogito_integration.vocabulary_name');
+    if (!$vocabulary) {
+      return new JsonResponse('Unable to create annotation due to vocabulary name not set! Please select a vocabulary name in the recogito integration settings for tagging purposes!', 500);
     }
-    foreach($annotation->textualbodies as $newtextualbody) {
-      if (!isset($newtextualbody->edited)) {
-        if (!\Drupal::currentUser()->hasPermission('recogito create annotations')) {
-          return JsonResponse::fromJsonString(json_encode("Insufficient permissions - User cannot create annotations"));
-        }
-      }
-      unset($newtextualbody->edited);
+    $vocabulary_entity = $this->entityTypeManager->getStorage('taxonomy_vocabulary')->load($vocabulary);
+    if (!$vocabulary_entity) {
+      return new JsonResponse('Unable to create annotation due to vocabulary not found! Please select a valid vocabulary in the recogito integration settings for tagging purposes!', 500);
     }
-    #Call the update function
-    self::updateAnnotationNode($annotation_node, $annotation);
-    return JsonResponse::fromJsonString(json_encode("Successful annotation update"));
-  }
-  /**
-  * Given an annotation object, delete the object with matching ID from Drupal storage..
-  * @return JsonResponse Annotation status after running function
-  */
-  public function deleteAnnotation() {
-    // add utf8_decode call for annotation json with diacritics to assist json_decode (was return null)
-
-    $annotation = json_decode(\Drupal::request()->server->get('HTTP_ANNOTATIONOBJ'));
-    $annotation_node = self::queryAnnotationNode($annotation->id);
-    if (!isset($annotation_node)) {
-      return JsonResponse::fromJsonString(json_encode("Nonexistent annotation ID"));
+    $body = json_decode($request->getContent(), TRUE);
+    $pageUrl = $body['pageUrl'];
+    $annotationNode = self::createAnnotationNode($body);
+    $collectionNode = self::queryAnnotationCollectionNode($pageUrl);
+    if (!$collectionNode) {
+      $collectionNode = self::createAnnotationCollectionNode($pageUrl);
     }
-    #Check for permissions
-    if (\Drupal::currentUser()->id() == Node::load($annotation_node)->getOwnerId()) {
-      if (!\Drupal::currentUser()->hasPermission('recogito delete own annotations') && !\Drupal::currentUser()->hasPermission('recogito delete annotations')) {
-        return JsonResponse::fromJsonString(json_encode("Insufficient permissions - User cannot delete own annotations"));
-      }
-    } else {
-      if (!\Drupal::currentUser()->hasPermission('recogito delete annotations')) {
-        return JsonResponse::fromJsonString(json_encode("Insufficient permissions - User cannot delete others' annotations"));
-      }
-    }
-    #Delete stored textualbodies before deleting the node
-    foreach(Node::load($annotation_node)->get('field_annotation_textualbodies')->referencedEntities() as $textualbody) {
-      $textualbody->delete();
-    }
-    Node::load($annotation_node)->delete();
-    return JsonResponse::fromJsonString(json_encode("Successful annotation deletion"));
+    self::addAnnotationToCollection($annotationNode, $collectionNode);
+    return new JsonResponse('Annotation created successfully.', 200);
   }
 
   /**
-  * Creates a TextualBody Node to store data in an annotation.
-  * @param object $textualbody An object containing all textualbody data to be entered in the Node.
-  * @param int $target Node id referring to the Annotation object that is to refer to the TextualBody
-  * @return int|void Return the node id of the new Node if successfully created, otherwise null
-  */
-  public function createNewTextualBodyNode($textualbody, $target) {
-    if (!isset($textualbody->modified)) {
-      $textualbody->modified = $textualbody->created;
+   * Updates an annotation based on the request body.
+   *
+   * @param string $annotation_id
+   *   The ID of the annotation to update.
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request object.
+   *
+   * @return \Symfony\Component\HttpFoundation\JsonResponse
+   *   The JSON response containing the status of the operation.
+   */
+  public function updateAnnotation(string $annotation_id, Request $request) {
+    $annotation_id = '#' . $annotation_id;
+    $node = self::queryAnnotationNode($annotation_id);
+    if (!$node) {
+      return new JsonResponse('Annotation not found.', 404);
     }
+    $user = $this->currentUser;
+    $body = json_decode($request->getContent(), TRUE);
+    $editable = $user->hasPermission('recogito edit annotations') || ($user->hasPermission('recogito edit own annotations') && $node->getOwnerId() === $user->id);
+    if (!$editable) {
+      return new JsonResponse('Insufficient permissions - User cannot edit this annotation.', 403);
+    }
+    self::updateAnnotationNode($body, $node);
+    return new JsonResponse('Successfully updated annotation!', 200);
+  }
+
+  /**
+   * Deletes an annotation based on the request body.
+   *
+   * @param string $annotation_id
+   *   The ID of the annotation to delete.
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request object.
+   *
+   * @return \Symfony\Component\HttpFoundation\JsonResponse
+   *   The JSON response containing the status of the operation.
+   */
+  public function deleteAnnotation(string $annotation_id, Request $request) {
+    $annotation_id = '#' . $annotation_id;
+    $node = self::queryAnnotationNode($annotation_id);
+    if (!$node) {
+      return new JsonResponse('Annotation not found.', 404);
+    }
+    $user = $this->currentUser;
+    $deletable = $user->hasPermission('recogito delete annotations') || ($user->hasPermission('recogito delete own annotations') && $node->getOwnerId() === $user->id);
+    if (!$deletable) {
+      return new JsonResponse('Insufficient permissions - User cannot delete this annotation.', 403);
+    }
+    self::deleteTextualbody($node);
+    $node->delete();
+    return new JsonResponse('Successfully deleted annotation!', 200);
+  }
+
+  /**
+   * Creates a new annotation collection node.
+   *
+   * @param string $pageUrl
+   *   The URL of the page to which the annotations belong.
+   *
+   * @return \Drupal\node\Entity\Node
+   *   The newly created annotation collection node.
+   */
+  public function createAnnotationCollectionNode(string $pageUrl) {
     $params = [
-        'type' => 'annotation_textualbody',
-        'langcode' => 'en',
-        'created' => time(),
-        'changed' => time(),
-        'uid' => \Drupal::currentUser()->id(),
-        'moderation_state' => 'published',
-
-        # annotation fields
-        // Kyle changed for annotation text has length > 255 when store it in this title field
-        //'title' => $textualbody->value,
-        'title' => (strlen($textualbody->value) > 255) ? substr($textualbody->value, 0, 255) : $textualbody->value,
-        'field_annotation_created' => $textualbody->created,
-        'field_annotation_creator_id' => $textualbody->creator_id,
-        'field_annotation_creator_name' => $textualbody->creator_name,
-        'field_annotation_modified' => $textualbody->modified,
-        'field_annotation_purpose' => $textualbody->purpose,
-        'field_annotation_target' => $target,
-        'field_annotation_value' => $textualbody->value
-
+      'type' => 'annotation_collection',
+      'langcode' => 'en',
+      'created' => time(),
+      'changed' => time(),
+      'uid' => $this->currentUser->id(),
+      'moderation_state' => 'published',
+      'title' => 'Annotations for: ' . $pageUrl,
+      'field_annotation_reference' => [],
+      'field_annotation_collection_url' => $pageUrl,
     ];
     $node = Node::create($params);
     $node->save();
-    #If TextualBody is a tag, upload the tag as a term to an annotation vocabulary if not already a term
-    if ($textualbody->purpose == 'tagging') {
-      unset($foundTaxonomyTerm);
-      foreach (\Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree(\Drupal::config('recogito_integration.settings')->get('recogito_integration.annotation_vocab_name')) as $term) {
-        if ($term->name == $textualbody->value) {
-          $foundTaxonomyTerm = true;
-        }
-      }
-      if (!isset($foundTaxonomyTerm)) {
-        Term::create([
-          'name' => $textualbody->value,
-          'vid' => \Drupal::config('recogito_integration.settings')->get('recogito_integration.annotation_vocab_name'),
-        ])->save();
-      }
-    }
+    return $node;
+  }
 
+  /**
+   * Queries the annotation node based on the annotation ID.
+   *
+   * @param string $annotationId
+   *   The ID of the annotation.
+   *
+   * @return \Drupal\node\Entity\Node
+   *   The annotation node.
+   */
+  public function queryAnnotationNode(string $annotationId) {
+    $annotations = $this->entityTypeManager
+      ->getStorage('node')
+      ->loadByProperties([
+        'type' => 'annotation',
+        'field_annotation_id' => $annotationId,
+        'status' => 1,
+      ]);
+    return reset($annotations);
+  }
+
+  /**
+   * Adds an annotation to an annotation collection node.
+   *
+   * @param \Drupal\node\Entity\Node $annotationNode
+   *   The annotation node.
+   * @param \Drupal\node\Entity\Node $collectionNode
+   *   The collection node.
+   */
+  public function addAnnotationToCollection(Node $annotationNode, Node $collectionNode) {
+    if (!isset($collectionNode)) {
+      return;
+    }
+    $collectionNode->set('changed', time());
+    $collectionNode->field_annotation_reference[] = $annotationNode->id();
+    $collectionNode->save();
+    if (!isset($annotationNode)) {
+      return;
+    }
+    $annotationNode->set('changed', time());
+    $annotationNode->field_annotation_page[] = $collectionNode->id();
+    $annotationNode->save();
+  }
+
+  /**
+   * Queries the annotation collection node based on the page URL.
+   *
+   * @param string $pageUrl
+   *   The URL of the page.
+   *
+   * @return \Drupal\node\Entity\Node
+   *   The annotation collection node.
+   */
+  public function queryAnnotationCollectionNode(string $pageUrl) {
+    $collectionNodes = $this->entityTypeManager
+      ->getStorage('node')
+      ->loadByProperties([
+        'type' => 'annotation_collection',
+        'field_annotation_collection_url' => $pageUrl,
+        'status' => 1,
+      ]);
+    return reset($collectionNodes);
+  }
+
+  /**
+   * Creates a textual body node for an annotation.
+   *
+   * @param array $textualbody
+   *   The textual body data.
+   * @param int $nodeId
+   *   The ID of the annotation node.
+   *
+   * @return int
+   *   The ID of the textual body node.
+   */
+  public function createTextualbodyNode(array $textualbody, int $nodeId) {
+    $params = [
+      'type' => 'annotation_textualbody',
+      'langcode' => 'en',
+      'created' => time(),
+      'changed' => time(),
+      'uid' => $this->currentUser->id(),
+      'moderation_state' => 'published',
+      'title' => (strlen($textualbody['value']) > 255) ? substr($textualbody['value'], 0, 255) : $textualbody['value'],
+      'field_annotation_purpose' => $textualbody['purpose'],
+      'field_annotation_created' => $textualbody['created'],
+      'field_annotation_modified' => $textualbody['modified'],
+      'field_annotation_target' => $nodeId,
+      'field_annotation_creator_id' => $textualbody['creator']['id'],
+      'field_annotation_creator_name' => $textualbody['creator']['name'],
+    ];
+    $config = $this->configFactory->get('recogito_integration.settings');
+    $vocabulary = $config->get('recogito_integration.vocabulary_name');
+    if ($textualbody['purpose'] == 'tagging') {
+      $terms = $this->entityTypeManager
+        ->getStorage('taxonomy_term')
+        ->loadByProperties([
+          'name' => $textualbody['value'],
+          'vid' => $vocabulary,
+        ]);
+      $term = reset($terms);
+      if (!$term) {
+        $term = Term::create([
+          'name' => $textualbody['value'],
+          'vid' => $vocabulary,
+        ]);
+        $term->save();
+      }
+      $params['field_annotation_tag_reference'] = $term->id();
+    }
+    else {
+      $params['field_annotation_value'] = $textualbody['value'];
+    }
+    $node = Node::create($params);
+    $node->save();
     return $node->id();
   }
 
   /**
-  * Return the id of a Node matching an id generated by the Recogito JS library.
-  * @param int $annotation_id Node id referring to the Annotation object
-  * @return int|void Return the node id of the new Node if successfully created, otherwise null
-  */
-  public function queryAnnotationNode($annotation_id)
-  {
-      $query = \Drupal::entityQuery('node');
-      $query->accessCheck(TRUE);
-      $query->condition('status', 1);
-      $query->condition('type', "annotation");
-      $query->condition('field_annotation_id', $annotation_id);
-      $result = $query->execute();
-      if (isset($result)) {
-        return reset($result);
-      }
+   * Creates an annotation node based on the annotation data.
+   *
+   * @param array $annotation
+   *   The annotation data.
+   *
+   * @return \Drupal\node\Entity\Node
+   *   The annotation node.
+   */
+  public function createAnnotationNode(array $annotation) {
+    $params = [
+      'type' => 'annotation',
+      'langcode' => 'en',
+      'created' => time(),
+      'changed' => time(),
+      'uid' => $this->currentUser->id(),
+      'moderation_state' => 'published',
+      'title' => $annotation['id'],
+      'field_annotation_id' => $annotation['id'],
+      'field_annotation_type' => $annotation['type'],
+      'field_annotation_page' => [],
+      'field_annotation_target_element' => $annotation['target_element'],
+    ];
+    switch ($annotation['type']) {
+      case 'Selection':
+        $params['field_annotation_image_source'] = $annotation['image_source'];
+        $params['field_annotation_image_value'] = $annotation['image_value'];
+        break;
 
+      case 'Annotation':
+        $params['field_annotation_target_end'] = $annotation['target_end'];
+        $params['field_annotation_target_exact'] = $annotation['target_exact'];
+        $params['field_annotation_target_start'] = $annotation['target_start'];
+        break;
+    }
+    $node = Node::create($params);
+    $node->save();
+    $references = [];
+    foreach ($annotation['textualbodies'] as $textualbody) {
+      $references[] = self::createTextualbodyNode($textualbody, $node->id());
+    }
+    $node->set('field_annotation_textualbodies', $references);
+    $node->save();
+    return $node;
   }
 
   /**
-  * Creates an Annotation node to store data for an annotation.
-  * @param object $annotation An object containing all annotation data to be entered in the Node.
-  */
-  public function createNewAnnotationNode($annotation)
-  {
-
-      // create new annotation node
-      $params = [
-          'type' => 'annotation',
-          'langcode' => 'en',
-          'created' => time(),
-          'changed' => time(),
-          'uid' => \Drupal::currentUser()->id(),
-          'moderation_state' => 'published',
-
-          // annotation fields
-          'title' => $annotation->title,
-          'field_annotation_id' => $annotation->id,
-          'field_annotation_type' =>$annotation->type,
-      ];
-      if ($annotation->type == "Selection") {
-        $params['field_annotation_image_source'] = $annotation->image_source;
-        $params['field_annotation_image_value'] = $annotation->image_value;
-      } else {
-        $params['field_annotation_target_end'] = $annotation->target_end;
-        $params['field_annotation_target_exact'] = $annotation->target_exact;
-        $params['field_annotation_target_start'] = $annotation->target_start;
-        $params['field_annotation_target_element'] = $annotation->target_element;
-      }
-
-      $node = Node::create($params);
-      $node->save();
-
-      $references = [];
-      foreach($annotation->textualbodies as $textualbody) {
-        $references[] = self::CreateNewTextualBodyNode($textualbody, $node->id());
-      }
-      $node->set('field_annotation_textualbodies', $references);
-      $node->save();
+   * Updates an annotation node based on the annotation data.
+   *
+   * @param array $annotation
+   *   The annotation data.
+   * @param \Drupal\node\Entity\Node $node
+   *   The annotation node.
+   */
+  public function updateAnnotationNode(array $annotation, Node $node) {
+    $node->set('changed', time());
+    if ($annotation['type'] === 'Selection') {
+      $node->set('field_annotation_image_value', $annotation['image_value']);
+    }
+    self::deleteTextualbody($node);
+    $references = [];
+    foreach ($annotation['textualbodies'] as $textualbody) {
+      $references[] = self::createTextualbodyNode($textualbody, $node->id());
+    }
+    $node->set('field_annotation_textualbodies', $references);
+    $node->save();
   }
 
   /**
-  * Given an annotation object and Node, update the Node with data from the object.
-  * @param int $nid Node id referring to the Annotation object
-  * @param object $annotation The object containing all annotatino data.
-  */
-  public function updateAnnotationNode($nid, $annotation)
-  {
-      // update existing Annotation node
-      $annotationNode = Node::load($nid);
-      if (isset($annotationNode)) {
-          $annotationNode->set('changed', time());
-
-          $annotationNode->set('title', $annotation->title);
-
-          $annotationNode->set('field_annotation_id', $annotation->id);
-
-          $annotationNode->set('field_annotation_type', $annotation->type);
-
-          if ($annotation->type == "Selection") {
-            $annotationNode->set('field_annotation_image_source',$annotation->image_source);
-            $annotationNode->set('field_annotation_image_value',$annotation->image_value);
-          } else {
-            $annotationNode->set('field_annotation_target_end',$annotation->target_end);
-            $annotationNode->set('field_annotation_target_exact',$annotation->target_exact);
-            $annotationNode->set('field_annotation_target_start',$annotation->target_start);
-          }
-
-          foreach($annotationNode->get('field_annotation_textualbodies')->referencedEntities() as $textualbody) {
-            $textualbody->delete();
-          }
-          #Recreate all TextualBodies
-          $references = [];
-          foreach($annotation->textualbodies as $textualbody) {
-            $references[] = self::createNewTextualBodyNode($textualbody, $annotationNode->id());
-          }
-          $annotationNode->set('field_annotation_textualbodies', $references);
-
-          $annotationNode->save();
-      }
-  }
-
-  /**
-  * Given a page url, return the Annotation Collection node referring to that url if it exists.
-  * @param string $page_url The url to the page to query.
-  * @return int|void The Node id of the annotation collection node if it exists, otherwise null
-  */
-  public function queryAnnotationCollectionNode($page_url)
-  {
-      $query = \Drupal::entityQuery('node')
-      ->accessCheck(TRUE)
-      ->condition('status', 1)
-      ->condition('type', "annotation_collection")
-      ->condition('field_annotation_collection_url', $page_url);
-      $result = $query->execute();
-      if (count($result) > 0) {
-        return Node::load(reset($result));
-      }
-
-  }
-
-  /**
-  * Create a new annotation collection node given a page url.
-  * @param string $page_url The page url to generate a Node with.
-  */
-  public function createNewAnnotationCollectionNode($page_url)
-  {
-      // create new annotation collection node
-      $params = [
-          // The node entity bundle.
-          'type' => 'annotation_collection',
-          'langcode' => 'en',
-          'created' => time(),
-          'changed' => time(),
-          // The user ID.
-          'uid' => \Drupal::currentUser()->id(),
-          'moderation_state' => 'published',
-
-          // annotation collection fields
-          'title' => 'Annotation Collection: ' . $page_url,
-
-          'field_annotation_reference' => array(),
-          'field_annotation_collection_url' => $page_url,
-      ];
-      $node = Node::create($params);
-      $node->save();
-  }
-
-  /**
-  * Adds an annotation to be referred to by an Annotation Collection Node.
-  * @param Node $annotationCollectionNode The Annotation Collection Node to add to.
-  * @param int $annotation_id The id of the Annotation Node to add to the Annotation Collection Node.
-  */
-  public function AnnotationCollectionAddAnnotation($annotationCollectionNode, $annotation_id)
-  {
-      // update existing Annotation node
-      if (isset($annotationCollectionNode)) {
-          $annotationCollectionNode->set('changed', time());
-
-          $annotationCollectionNode->field_annotation_reference[] = $annotation_id;
-
-
-          $annotationCollectionNode->save();
-
-          $annotation_node = Node::load($annotation_id);
-          if (isset($annotation_node)) {
-            $annotation_node->set('changed', time());
-
-            $annotation_node->field_annotation_page[] = $annotationCollectionNode->id();
-
-
-            $annotation_node->save();
-          }
-      }
-  }
-
-  /**
-  * Delete any tags that don't appear in the given vocabulary.
-  */
-  public function DeleteUnneededTags() {
-    $tids = \Drupal::entityQuery('taxonomy_term')
-      ->accessCheck(TRUE)
-      -> condition('vid', \Drupal::config('recogito_integration.settings')->get('recogito_integration.annotation_vocab_name'))
-      -> execute();
-    foreach($tids as $tid) {
-      $term = Term::load($tid);
-      $tags = \Drupal::entityQuery('node')
-      ->accessCheck(TRUE)
-      ->condition('status', 1)
-      ->condition('type', "annotation_textualbody")
-      ->condition('field_annotation_purpose', 'tagging')
-      ->condition('field_annotation_value', ((isset($term)) ? $term->get('name')->value: ''))
-      ->execute();
-      if (count($tags) == 0) {
-        $term->delete();
-      }
+   * Deletes the textual body nodes associated with an annotation node.
+   *
+   * @param \Drupal\node\Entity\Node $node
+   *   The annotation node.
+   */
+  public function deleteTextualbody(Node $node) {
+    $textualbodies = $node->get('field_annotation_textualbodies')->referencedEntities();
+    foreach ($textualbodies as $textualbody) {
+      $textualbody->delete();
     }
   }
+
 }

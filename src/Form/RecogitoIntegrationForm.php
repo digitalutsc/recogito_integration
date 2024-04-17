@@ -11,6 +11,9 @@ use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\field\Entity\FieldConfig;
 
+/**
+ * Form for Recogito Integration's config.
+ */
 class RecogitoIntegrationForm extends ConfigFormBase {
 
   /**
@@ -149,6 +152,36 @@ class RecogitoIntegrationForm extends ConfigFormBase {
   }
 
   /**
+   * Checks if a vocabulary has tags associated in annotations.
+   *
+   * @var string $vocabulary
+   *   The vocabulary to check for existing tags.
+   *
+   * @return bool
+   *   TRUE if the vocabulary has existing tags, FALSE otherwise.
+   */
+  public function hasTags(string $vocabulary) {
+    if (!$vocabulary) {
+      return FALSE;
+    }
+    $textualbodies = $this->entityTypeManager
+      ->getStorage('node')
+      ->loadByProperties([
+        'type' => 'annotation_textualbody',
+        'field_annotation_purpose' => 'tagging'
+      ]);
+    foreach ($textualbodies as $textualbody) {
+      $tags = $textualbody->get('field_annotation_tag_reference')->referencedEntities();
+      foreach ($tags as $tag) {
+        if ($tag->bundle() == $vocabulary) {
+          return TRUE;
+        }
+      }
+    }
+    return FALSE;
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
@@ -192,7 +225,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       ];
 
       $current_value = $form_state->getValue($ct . '_annotatable');
-      $saved_value = $contentSave['enabled'];
+      $saved_value = $contentSave['enabled'] ?? 0;
       if (($current_value === NULL && $saved_value ?? FALSE) || $current_value) {
         $form['annotatables'][$ct . '_container'][$ct . '_annotatable_fields'] = [
           '#type' => 'select',
@@ -305,18 +338,26 @@ class RecogitoIntegrationForm extends ConfigFormBase {
 
     $form['tag_set'] = [
       '#type' => 'fieldset',
-      '#title' => $this->t('Pick a vocabulary to serve for tagging.'),
+      '#title' => $this->t("Pick a vocabulary to serve for tagging."),
     ];
 
+    $config_vocab = $config->get('recogito_integration.vocabulary_name');
+    $lockedSelection = $this->hasTags($config_vocab ?? '');
+    $tag_description = $lockedSelection ?
+      'Tag switching is disabled! Please delete existing annotation textualbody tags to switch vocabulary!' :
+      'Select the vocabulary for tagging.<br>
+      WARNING: Any non-existent tags entered during annotating will be created within this vocabulary as a taxonomy term!';
     $form['tag_set']['vocabulary_name'] = [
       '#type' => 'select',
       '#title' => $this->t('Annotation Vocabulary Name'),
       '#options' => $vocabulary_options,
-      '#default_value' => $config->get('recogito_integration.vocabulary_name') ?? '',
+      '#default_value' => $config_vocab ?? '',
+      '#disabled' => $lockedSelection,
       '#ajax' => [
         'callback' => '::vocabularyCallback',
         'wrapper' => 'default_term_container'
       ],
+      '#description' => $this->t($tag_description)
     ];
 
     $form['tag_set']['default_term_container'] = [
@@ -325,9 +366,8 @@ class RecogitoIntegrationForm extends ConfigFormBase {
     ];
 
     $current_value = $form_state->getValue('vocabulary_name');
-    $saved_value = $config->get('recogito_integration.vocabulary_name');
-    $selected_vocab = $current_value ?? $saved_value;
-    if (($current_value === NULL && $saved_value ?? FALSE) || $current_value) {
+    $selected_vocab = $current_value ?? $config_vocab;
+    if (($current_value === NULL && $config_vocab ?? FALSE) || $current_value) {
       $form['tag_set']['default_term_container']['default_tag'] = [
         '#type' => 'select',
         '#multiple' => TRUE,

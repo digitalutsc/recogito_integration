@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * @file
+ * Contains hooks and functions for the Recogito Integration module.
+ *
+ * This module integrates the Recogito annotation tool with Drupal. It provides
+ * functionality to attach Recogito to certain node types and manage permissions
+ * for viewing, creating, editing, and deleting annotations.
+ */
+
 use Drupal\node\NodeInterface;
 use Drupal\taxonomy\TermInterface;
 use Drupal\field\Entity\FieldStorageConfig;
@@ -15,6 +24,12 @@ use Drupal\Core\Form\FormStateInterface;
  * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
  */
 function recogito_integration_page_attachments(array &$attachments) {
+  $currentUser = \Drupal::currentUser();
+  $viewPerm = $currentUser->hasPermission('recogito view annotations');
+  if (!$viewPerm) {
+    return;
+  }
+  $createPerm = $currentUser->hasPermission('recogito create annotations');
   $routeName = \Drupal::routeMatch()->getRouteName();
   if (!in_array($routeName, ['entity.node.canonical', 'recogito_annotate_node'])) {
     return;
@@ -28,23 +43,53 @@ function recogito_integration_page_attachments(array &$attachments) {
   if (!$annotatables[$node->getType()]['enabled']) {
     return;
   }
-  $currentUser = \Drupal::currentUser();
-  $perms = [
-    'view' => $currentUser->hasPermission('recogito view annotations'),
-    'create' => $currentUser->hasPermission('recogito create annotations'),
-    'edit' => $currentUser->hasPermission('recogito edit annotations'),
-    'delete' => $currentUser->hasPermission('recogito delete annotations'),
-    'edit-own' => $currentUser->hasPermission('recogito edit own annotations'),
-    'delete-own' => $currentUser->hasPermission('recogito delete own annotations'),
-  ];
-  $attached = [
-    'permissions' => $perms,
-    'userData' => [
-      'id' => \Drupal::request()->getHost() . '/user/' . $currentUser->id(),
-      'displayName' => $currentUser->getDisplayName(),
-    ],
-    'admin' => $currentUser->isAuthenticated(),
-  ];
+  $attached = [];
+  if ($routeName === 'recogito_annotate_node' && $createPerm) {
+    $perms = [
+      'view' => $viewPerm,
+      'create' => $createPerm,
+      'edit' => $currentUser->hasPermission('recogito edit annotations'),
+      'delete' => $currentUser->hasPermission('recogito delete annotations'),
+      'edit-own' => $currentUser->hasPermission('recogito edit own annotations'),
+      'delete-own' => $currentUser->hasPermission('recogito delete own annotations'),
+    ];
+    $attached = [
+      'permissions' => $perms,
+      'userData' => [
+        'id' => \Drupal::request()->getHost() . '/user/' . $currentUser->id(),
+        'displayName' => $currentUser->getDisplayName(),
+      ],
+      'admin' => $currentUser->isAuthenticated(),
+      'nodeId' => $node->id(),
+    ];
+    $vocab = $config->get('recogito_integration.vocabulary_name');
+    $termList = [];
+    if ($vocab) {
+      $terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vocab);
+      $termList = array_map(function ($term) {
+        return $term->name;
+      }, $terms);
+    }
+    $defaultTagIds = $config->get('recogito_integration.default_tag') ?? [];
+    $defaultTags = [];
+    if ($defaultTagIds) {
+      $tags = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadMultiple($defaultTagIds);
+      $defaultTags = array_map(function ($term) {
+        return $term->getName();
+      }, $tags);
+      $defaultTags = array_values($defaultTags);
+    }
+    $attached['tagOptions'] = [
+      'defaultTags' => $defaultTags,
+      'tagList' => $termList,
+    ];
+  }
+  else {
+    $attached = [
+      'permissions' => ['view' => $viewPerm],
+      'nodeId' => $node->id(),
+    ];
+  }
 
   $attached['annotatable_fields'] = $annotatables[$node->getType()]['fields'];
 
@@ -55,19 +100,6 @@ function recogito_integration_page_attachments(array &$attachments) {
     $attached['custom_elements'] = [];
   }
 
-  $vocab = $config->get('recogito_integration.vocabulary_name');
-  $termList = [];
-  if ($vocab) {
-    $terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vocab);
-    $termList = array_map(function ($term) {
-      return $term->name;
-    }, $terms);
-  }
-  $attached['tagOptions'] = [
-    'defaultTag' => $config->get('recogito_integration.default_tag') ?? [],
-    'tagList' => $termList,
-  ];
-
   $attachments['#attached']['drupalSettings']['recogito_integration'] = $attached;
   switch ($routeName) {
     case 'entity.node.canonical':
@@ -75,7 +107,9 @@ function recogito_integration_page_attachments(array &$attachments) {
       break;
 
     case 'recogito_annotate_node':
-      $attachments['#attached']['library'][] = 'recogito_integration/recogito_admin';
+      if ($createPerm) {
+        $attachments['#attached']['library'][] = 'recogito_integration/recogito_admin';
+      }
       break;
   }
 }
@@ -96,16 +130,13 @@ function recogito_integration_node_predelete(NodeInterface $node) {
   }
   $collections = getAnnotationCollection($node->id());
   foreach ($collections as $collection) {
-    $annotation_references = $collection->get('field_annotation_reference')->getValue();
-    foreach ($annotation_references as $reference) {
-      $annotation = \Drupal::entityTypeManager()
-        ->getStorage('node')
-        ->load($reference['target_id']);
-      if (isset($annotation)) {
-        $textualBodies = $annotation->get('field_annotation_textualbodies')->getValue();
-        deleteAnnotationTextualBody($textualBodies);
-        $annotation->delete();
+    $annotation_references = $collection->get('field_annotation_reference')->referencedEntities();
+    foreach ($annotation_references as $annotation) {
+      $textualbodies = $annotation->get('field_annotation_textualbodies')->referencedEntities();
+      foreach ($textualbodies as $textualBody) {
+        $textualBody->delete();
       }
+      $annotation->delete();
     }
     $collection->delete();
   }
@@ -124,7 +155,7 @@ function recogito_integration_taxonomy_term_predelete(TermInterface $term) {
   if ($vocabularyId !== $selectedVocab) {
     return;
   }
-  $textualBodies = getTagTextualBody($term->getName());
+  $textualBodies = getTagTextualBody($term->id());
   foreach ($textualBodies as $textualBody) {
     $textualBody->delete();
   }
@@ -140,7 +171,7 @@ function recogito_integration_taxonomy_term_predelete(TermInterface $term) {
  * @param string $form_id
  *   The form ID.
  */
-function recogito_integration_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+function recogito_integration_form_alter(array &$form, FormStateInterface $form_state, $form_id) {
   if (preg_match('/^node_.*_(edit|delete)_form$/', $form_id, $matches)) {
     $form_type = $matches[1];
     $nid = $form_state->getFormObject()->getEntity()->id();
@@ -148,6 +179,9 @@ function recogito_integration_form_alter(&$form, FormStateInterface $form_state,
       return;
     }
     $node = $form_state->getFormObject()->getEntity();
+    if (!$node instanceof NodeInterface) {
+      return;
+    }
     if (in_array($node->getType(), [
       'annotation_collection',
       'annotation',
@@ -193,7 +227,7 @@ function recogito_integration_form_alter(&$form, FormStateInterface $form_state,
     $vocab = $config->get('recogito_integration.vocabulary_name') ?? '';
     if ($vocab && $matches[1] === $vocab) {
       $term = $form_state->getFormObject()->getEntity();
-      if (getTagTextualBody($term->getName())) {
+      if (getTagTextualBody($term->id())) {
         $form['description']['#markup'] = '<strong><u>Warning:</u></strong><br>
         This term is used for tagging annotations. Deleting this term will
         remove the tag from annotations.<br>
@@ -209,19 +243,17 @@ function recogito_integration_form_alter(&$form, FormStateInterface $form_state,
  * @param array $variables
  *   The variables array.
  */
-function recogito_integration_preprocess_field(&$variables) {
+function recogito_integration_preprocess_field(array &$variables) {
   $config = \Drupal::config('recogito_integration.settings');
   $annotatables = $config->get('recogito_integration.annotatables') ?? [];
   $contentType = $variables['element']['#bundle'];
-  if (!isset($annotatables[$contentType])) {
-    return;
-  }
-  if (!$annotatables[$contentType]['enabled']) {
+  if (!isset($annotatables[$contentType]) || !$annotatables[$contentType]['enabled']) {
     return;
   }
   $fieldsAnnotate = $annotatables[$contentType]['fields'] ?? [];
   if (in_array($variables['element']['#field_name'], $fieldsAnnotate)) {
     $variables['attributes']['annotatable-field-id'] = $variables['element']['#field_name'];
+    $variables['attributes']['annotatable-type'] = 'field';
   }
 }
 
@@ -231,7 +263,7 @@ function recogito_integration_preprocess_field(&$variables) {
  * @param array $variables
  *   The variables array.
  */
-function recogito_integration_preprocess_views_view_field(&$variables) {
+function recogito_integration_preprocess_views_view_field(array &$variables) {
   $field = $variables['field'];
   $config = \Drupal::config('recogito_integration.settings');
   $annotatables = $config->get('recogito_integration.annotatables') ?? [];
@@ -240,16 +272,13 @@ function recogito_integration_preprocess_views_view_field(&$variables) {
     return;
   }
   $contentType = $node->getType();
-  if (!isset($annotatables[$contentType])) {
-    return;
-  }
-  if (!$annotatables[$contentType]['enabled']) {
+  if (!isset($annotatables[$contentType]) || !$annotatables[$contentType]['enabled']) {
     return;
   }
   $fieldsAnnotate = $annotatables[$contentType]['fields'] ?? [];
   if (in_array($field->field, $fieldsAnnotate)) {
     $variables['output'] = [
-      '#prefix' => '<div annotatable-field-id="' . $field->field . '">',
+      '#prefix' => '<div annotatable-field-id="' . $field->field . '" annotatable-type="view_field">',
       '#suffix' => '</div>',
       '#markup' => $variables['output'],
     ];
@@ -259,18 +288,17 @@ function recogito_integration_preprocess_views_view_field(&$variables) {
 /**
  * Query Annotation Collection based on URL.
  *
- * @param string $nodeId
+ * @param int $nodeId
  *   The node ID.
  */
-function getAnnotationCollection($nodeId) {
+function getAnnotationCollection(int $nodeId) {
   $field_storage = FieldStorageConfig::loadByName('node', 'field_annotation_collection_url');
   if (!$field_storage) {
     return [];
   }
   $url = '/node/' . $nodeId;
   return \Drupal::entityTypeManager()
-    ->getListBuilder('node')
-    ->getStorage()
+    ->getStorage('node')
     ->loadByProperties([
       'type' => 'annotation_collection',
       'field_annotation_collection_url' => $url,
@@ -281,16 +309,15 @@ function getAnnotationCollection($nodeId) {
 /**
  * Query Textualbody Tags by Taxonomy Term.
  *
- * @param string $termName
+ * @param int $termId
  *   The term name.
  */
-function getTagTextualBody($termName) {
+function getTagTextualBody(int $termId) {
   return \Drupal::entityTypeManager()
-    ->getListBuilder('node')
-    ->getStorage()
+    ->getStorage('node')
     ->loadByProperties([
       'type' => 'annotation_textualbody',
-      'field_annotation_value' => $termName,
+      'field_annotation_tag_reference' => $termId,
       'field_annotation_purpose' => 'tagging',
     ]);
 

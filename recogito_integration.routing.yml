@@ -2,7 +2,7 @@ recogito_get_annotations:
   path: '/recogito_integration/get'
   methods:  [GET]
   defaults:
-    _controller: 'Drupal\recogito_integration\Controller\AnnotationStorage::readAnnotations'
+    _controller: 'Drupal\recogito_integration\Controller\AnnotationStorage::getAnnotations'
   requirements:
     _permission: 'access content'
 
@@ -15,15 +15,15 @@ recogito_create_annotation:
     _permission: 'access content'
 
 recogito_update_annotation:
-  path: '/recogito_integration/update'
-  methods: [POST]
+  path: '/recogito_integration/update/{annotation_id}'
+  methods: [PUT]
   defaults:
     _controller: 'Drupal\recogito_integration\Controller\AnnotationStorage::updateAnnotation'
   requirements:
     _permission: 'access content'
 
 recogito_delete_annotation:
-  path: '/recogito_integration/delete'
+  path: '/recogito_integration/delete/{annotation_id}'
   methods: [DELETE]
   defaults:
     _controller: 'Drupal\recogito_integration\Controller\AnnotationStorage::deleteAnnotation'

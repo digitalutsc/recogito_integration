@@ -9,6 +9,7 @@ dependencies:
     - field.field.node.annotation_textualbody.field_annotation_modified
     - field.field.node.annotation_textualbody.field_annotation_purpose
     - field.field.node.annotation_textualbody.field_annotation_target
+    - field.field.node.annotation_textualbody.field_annotation_tag_reference
     - field.field.node.annotation_textualbody.field_annotation_value
     - node.type.annotation_textualbody
   enforced:
@@ -59,6 +60,15 @@ content:
   field_annotation_target:
     type: entity_reference_entity_view
     weight: 0
+    region: content
+    label: inline
+    settings:
+      view_mode: teaser
+      link: false
+    third_party_settings: {  }
+  field_annotation_tag_reference:
+    type: entity_reference_entity_view
+    weight: 9
     region: content
     label: inline
     settings:
