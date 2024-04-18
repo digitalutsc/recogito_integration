@@ -171,7 +171,7 @@ function initRecogito(domObj, settings) {
       addAnnotation(txtAnnotation, previous);
       return;
     }
-    if (perms['edit-own'] && userData['id'] !== annotation.body[0].creator.id) {
+    if (!perms['edit'] && perms['edit-own'] && userData['id'] !== annotation.body[0].creator.id) {
       alert('You cannot edit as this annotation was created by another user.');
       txtAnnotation.removeAnnotation(annotation);
       addAnnotation(txtAnnotation, previous);
@@ -191,7 +191,7 @@ function initRecogito(domObj, settings) {
       addAnnotation(txtAnnotation, annotation);
       return;
     }
-    else if (perms['delete-own'] && userData['id'] !== annotation.body[0].creator.id) {
+    if (!perms['delete'] && perms['delete-own'] && userData['id'] !== annotation.body[0].creator.id) {
       alert('You cannot delete as this annotation was created by another user.');
       addAnnotation(txtAnnotation, annotation);
       return;
@@ -403,15 +403,13 @@ function initAnnotorious(imgObj, settings) {
   });
 
   imgAnnotation.on('updateAnnotation', function(annotation, previous) {
-    // also need to check if user has self permission for its own annotations
-
     if (!perms['edit'] && !perms['edit-own']) {
       alert('You do not have permission to update annotations.');
       imgAnnotation.removeAnnotation(annotation);
       addImageAnnotation(imgAnnotation, previous, true);
       return;
     }
-    if (perms['edit-own'] && userData['id'] !== annotation.body[0].creator.id) {
+    if (!perms['edit'] && perms['edit-own'] && userData['id'] !== annotation.body[0].creator.id) {
       alert('You cannot edit as this annotation was created by another user.');
       imgAnnotation.removeAnnotation(annotation);
       addImageAnnotation(imgAnnotation, previous, true);
@@ -425,12 +423,12 @@ function initAnnotorious(imgObj, settings) {
 
   imgAnnotation.on('deleteAnnotation', function(annotation) {
     let editable = perms['edit'] || (perms['edit-own'] && userData['id'] === annotation.body[0].creator.id);
-    if (!perms['delete']) {
+    if (!perms['delete'] && !perms['delete-own']) {
       alert('You do not have permission to delete annotations.');
       addImageAnnotation(imgAnnotation, annotation, !editable);
       return;
     }
-    else if (perms['delete-own'] && userData['id'] !== annotation.body[0].creator.id) {
+    if (!perms['delete'] && perms['delete-own'] && userData['id'] !== annotation.body[0].creator.id) {
       alert('You cannot delete as this annotation was created by another user.');
       addImageAnnotation(imgAnnotation, annotation, !editable);
       return;
