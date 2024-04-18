@@ -431,17 +431,18 @@ class AnnotationStorage extends ControllerBase {
     ];
     $config = $this->configFactory->get('recogito_integration.settings');
     $vocabulary = $config->get('recogito_integration.vocabulary_name');
+    $textual_value = urldecode($textualbody['value']);
     if ($textualbody['purpose'] == 'tagging') {
       $terms = $this->entityTypeManager
         ->getStorage('taxonomy_term')
         ->loadByProperties([
-          'name' => $textualbody['value'],
+          'name' => $textual_value,
           'vid' => $vocabulary,
         ]);
       $term = reset($terms);
       if (!$term) {
         $term = Term::create([
-          'name' => $textualbody['value'],
+          'name' => $textual_value,
           'vid' => $vocabulary,
         ]);
         $term->save();
@@ -449,7 +450,7 @@ class AnnotationStorage extends ControllerBase {
       $params['field_annotation_tag_reference'] = $term->id();
     }
     else {
-      $params['field_annotation_value'] = $textualbody['value'];
+      $params['field_annotation_value'] = $textual_value;
     }
     $node = Node::create($params);
     $node->save();
