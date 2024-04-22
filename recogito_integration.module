@@ -192,10 +192,9 @@ function recogito_integration_form_alter(array &$form, FormStateInterface $form_
     if (getAnnotationCollection($nid)) {
       switch ($form_type) {
         case 'edit':
-          $msg = 'IMPORTANT INFORMATION:\n\n
-          This page contains annotations. Updating this node may affect
-          the positioning of existing annotations.\n\n Please double check
-          the existing annotations after updating this page.';
+          $msg = 'IMPORTANT INFORMATION:\n\nThis page contains annotations. Updating this node may affect '
+          . 'the positioning of existing annotations.\n\nPlease double check the existing annotations after '
+          . 'updating this page.';
           $form['actions']['submit'] = [
             '#type' => 'submit',
             '#value' => 'Save',
