@@ -161,6 +161,7 @@ function initRecogito(domObj, settings) {
     annotation.target_element = target;
     removeDuplicateTags(annotation);
     annotation.node_id = settings.nodeId;
+    annotation.type = 'Text';
     createAnnotation(annotation);
   });
 
@@ -398,7 +399,7 @@ function initAnnotorious(imgObj, settings) {
     annotation.target_element = target;
     removeDuplicateTags(annotation);
     annotation.node_id = settings.nodeId;
-    annotation.type = 'Selection';
+    annotation.type = 'Image';
     createAnnotation(annotation);
   });
 
@@ -491,21 +492,21 @@ function getAnnotations(settings) {
     url: '/recogito_integration/get',
     dataType: 'json',
     headers: {
-      'pageurl': '/node/' + settings.nodeId
+      'nodeId': settings.nodeId
     },
     success: function(data) {
       data = JSON.parse(data);
       for (let content of data) {
         let annotation = AnnotationConverter.convertDataToW3C(content);
         switch (annotation.type) {
-          case 'Annotation':
+          case 'Text':
             if (textAnnotations[annotation.target_element]) {
               for (let annotationInstance of textAnnotations[annotation.target_element]) {
                 addAnnotation(annotationInstance, annotation);
               }
             }
             break;
-          case 'Selection':
+          case 'Image':
             if (imageAnnotations[annotation.target_element]) {
               for (let annotationInstance of imageAnnotations[annotation.target_element]) {
                 if (annotationInstance.targetSrc === annotation.target.source) {
@@ -531,7 +532,7 @@ function getAnnotations(settings) {
  */
 function createAnnotation(annotation) {
   let annotationData = AnnotationConverter.convertW3CToData(annotation);
-  annotationData['pageUrl'] = '/node/' + annotation.node_id;
+  annotationData['nodeId'] = annotation.node_id;
   $.ajax({
     type: 'POST',
     url: '/recogito_integration/create',

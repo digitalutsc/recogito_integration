@@ -1,0 +1,78 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.paragraph.annotation_textualbody.field_annotation_comment
+    - field.field.paragraph.annotation_textualbody.field_annotation_creator_id
+    - field.field.paragraph.annotation_textualbody.field_annotation_creator_name
+    - field.field.paragraph.annotation_textualbody.field_annotation_date_created
+    - field.field.paragraph.annotation_textualbody.field_annotation_last_modified
+    - field.field.paragraph.annotation_textualbody.field_annotation_purpose
+    - field.field.paragraph.annotation_textualbody.field_annotation_tag_reference
+    - paragraphs.paragraphs_type.annotation_textualbody
+id: paragraph.annotation_textualbody.default
+targetEntityType: paragraph
+bundle: annotation_textualbody
+mode: default
+content:
+  field_annotation_comment:
+    type: string_textarea
+    weight: 0
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: {  }
+  field_annotation_creator_id:
+    type: string_textarea
+    weight: 0
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: {  }
+  field_annotation_creator_name:
+    type: string_textarea
+    weight: 0
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: {  }
+  field_annotation_date_created:
+    type: string_textfield
+    weight: 0
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_annotation_last_modified:
+    type: string_textfield
+    weight: 0
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_annotation_purpose:
+    type: string_textfield
+    weight: 0
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_annotation_tag_reference:
+    type: entity_reference_autocomplete
+    weight: 0
+    region: content
+    settings:
+      match_operator: CONTAINS
+      match_limit: 10
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+hidden:
+  created: true
+  status: true

@@ -13,7 +13,7 @@ var AnnotationConverter = (function() {
       body['value'] = encodeURIComponent(body['value']);
     }
     switch (annotation.type) {
-      case 'Annotation':
+      case 'Text':
         for (let selector of annotation.target.selector) {
           switch (selector.type) {
             case 'TextQuoteSelector':
@@ -26,7 +26,7 @@ var AnnotationConverter = (function() {
           }
         }
         break;
-      case 'Selection':
+      case 'Image':
         data['image_value'] = annotation.target.selector.value;
         data['image_source'] = annotation.target.source;
         break;
@@ -49,7 +49,7 @@ var AnnotationConverter = (function() {
     annotation['type'] = data['type'];
     annotation['target'] = {selector: []};
     switch (annotation['type']) {
-      case 'Annotation':
+      case 'Text':
         if (data['target_exact'] > 0) {
           annotation['target'].selector.push({
             type: 'TextQuoteSelector',
@@ -63,7 +63,7 @@ var AnnotationConverter = (function() {
         });
         annotation['style'] = data['style'];
         break;
-      case 'Selection':
+      case 'Image':
         annotation['target'].selector = {
           conformsTo: "http://www.w3.org/TR/media-frags/",
           type: 'FragmentSelector',

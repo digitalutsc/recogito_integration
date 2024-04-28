@@ -11,7 +11,6 @@
 
 use Drupal\node\NodeInterface;
 use Drupal\taxonomy\TermInterface;
-use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\Core\Form\FormStateInterface;
 
 /**
@@ -121,24 +120,16 @@ function recogito_integration_page_attachments(array &$attachments) {
  *   The node entity.
  */
 function recogito_integration_node_predelete(NodeInterface $node) {
-  if (in_array($node->getType(), [
-    'annotation_collection',
-    'annotation',
-    'annotation_textualbody',
-  ])) {
+  if ($node->getType() == 'annotation') {
+    $textualbodies = $node->get('field_annotation_textualbody')->referencedEntities();
+    foreach ($textualbodies as $textualbody) {
+      $textualbody->delete();
+    }
     return;
   }
-  $collections = getAnnotationCollection($node->id());
-  foreach ($collections as $collection) {
-    $annotation_references = $collection->get('field_annotation_reference')->referencedEntities();
-    foreach ($annotation_references as $annotation) {
-      $textualbodies = $annotation->get('field_annotation_textualbodies')->referencedEntities();
-      foreach ($textualbodies as $textualBody) {
-        $textualBody->delete();
-      }
-      $annotation->delete();
-    }
-    $collection->delete();
+  $annotations = getAnnotationsForNode($node->id());
+  foreach ($annotations as $annotation) {
+    $annotation->delete();
   }
 }
 
@@ -182,14 +173,10 @@ function recogito_integration_form_alter(array &$form, FormStateInterface $form_
     if (!$node instanceof NodeInterface) {
       return;
     }
-    if (in_array($node->getType(), [
-      'annotation_collection',
-      'annotation',
-      'annotation_textualbody',
-    ])) {
+    if ($node->getType() == 'annotation') {
       return;
     }
-    if (getAnnotationCollection($nid)) {
+    if (getAnnotationsForNode($nid)) {
       switch ($form_type) {
         case 'edit':
           $msg = 'IMPORTANT INFORMATION:\n\nThis page contains annotations. Updating this node may affect '
@@ -290,17 +277,12 @@ function recogito_integration_preprocess_views_view_field(array &$variables) {
  * @param int $nodeId
  *   The node ID.
  */
-function getAnnotationCollection(int $nodeId) {
-  $field_storage = FieldStorageConfig::loadByName('node', 'field_annotation_collection_url');
-  if (!$field_storage) {
-    return [];
-  }
-  $url = '/node/' . $nodeId;
+function getAnnotationsForNode(int $nodeId) {
   return \Drupal::entityTypeManager()
     ->getStorage('node')
     ->loadByProperties([
-      'type' => 'annotation_collection',
-      'field_annotation_collection_url' => $url,
+      'type' => 'annotation',
+      'field_annotation_node_reference' => $nodeId,
       'status' => 1,
     ]);
 }
@@ -313,7 +295,7 @@ function getAnnotationCollection(int $nodeId) {
  */
 function getTagTextualBody(int $termId) {
   return \Drupal::entityTypeManager()
-    ->getStorage('node')
+    ->getStorage('paragraph')
     ->loadByProperties([
       'type' => 'annotation_textualbody',
       'field_annotation_tag_reference' => $termId,

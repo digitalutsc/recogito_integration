@@ -6,8 +6,11 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountProxyInterface;
+use Drupal\node\NodeInterface;
 use Drupal\node\Entity\Node;
+use Drupal\paragraphs\Entity\Paragraph;
 use Drupal\taxonomy\Entity\Term;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -47,6 +50,13 @@ class AnnotationStorage extends ControllerBase {
   protected $entityFieldManager;
 
   /**
+   * The current route match.
+   *
+   * @var \Drupal\Core\Routing\RouteMatchInterface
+   */
+  protected $routeMatch;
+
+  /**
    * Constructs a new Annotation Storage Controller.
    *
    * @param \Drupal\Core\Session\AccountProxyInterface $current_user
@@ -57,16 +67,20 @@ class AnnotationStorage extends ControllerBase {
    *   The entity type manager.
    * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager
    *   The entity field manager.
+   * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
+   *   The route match.
    */
   public function __construct(
     AccountProxyInterface $current_user,
     ConfigFactoryInterface $config_factory,
     EntityTypeManagerInterface $entity_type_manager,
-    EntityFieldManagerInterface $entity_field_manager) {
+    EntityFieldManagerInterface $entity_field_manager,
+    RouteMatchInterface $route_match) {
     $this->currentUser = $current_user;
     $this->configFactory = $config_factory;
     $this->entityTypeManager = $entity_type_manager;
     $this->entityFieldManager = $entity_field_manager;
+    $this->routeMatch = $route_match;
   }
 
   /**
@@ -77,7 +91,8 @@ class AnnotationStorage extends ControllerBase {
       $container->get('current_user'),
       $container->get('config.factory'),
       $container->get('entity_type.manager'),
-      $container->get('entity_field.manager')
+      $container->get('entity_field.manager'),
+      $container->get('current_route_match')
     );
   }
 
@@ -166,28 +181,30 @@ class AnnotationStorage extends ControllerBase {
     if (!$user->hasPermission('recogito view annotations')) {
       return new JsonResponse('Insufficient permissions - User cannot view annotations.', 403);
     }
-    $pageUrl = $request->headers->get('pageurl');
-    $collectionNode = self::queryAnnotationCollectionNode($pageUrl);
-    if (!$collectionNode) {
+    $nid = $request->headers->get('nodeId');
+    if (!$nid) {
+      return new JsonResponse('Unable to retrieve annotations as no ID was passed.', 500);
+    }
+    $annotations = self::getAnnotationForNode($nid);
+    if (!$annotations) {
       return new JsonResponse(json_encode([]), 200);
     }
     $annotationData = [];
-    $annotations = $collectionNode->get('field_annotation_reference')->referencedEntities();
     foreach ($annotations as $annotation) {
       $textualbodies = [];
       $tags = [];
-      $textualbodyNodes = $annotation->get('field_annotation_textualbodies')->referencedEntities();
-      foreach ($textualbodyNodes as $textualbody) {
+      $textualbodyParagraphs = $annotation->get('field_annotation_textualbody')->referencedEntities();
+      foreach ($textualbodyParagraphs as $textualbody) {
         $bodyContent = [
-          'created' => $textualbody->get('field_annotation_created')->getString(),
+          'created' => $textualbody->get('field_annotation_date_created')->getString(),
           'creator' => [
             'id' => $textualbody->get('field_annotation_creator_id')->getString(),
             'name' => $textualbody->get('field_annotation_creator_name')->getString(),
           ],
-          'modified' => $textualbody->get('field_annotation_modified')->getString(),
+          'modified' => $textualbody->get('field_annotation_last_modified')->getString(),
           'purpose' => $textualbody->get('field_annotation_purpose')->getString(),
         ];
-        if ($textualbody->get('field_annotation_purpose')->getString() === 'tagging') {
+        if ($bodyContent['purpose'] === 'tagging') {
           $terms = $textualbody->get('field_annotation_tag_reference')->referencedEntities();
           $tag = reset($terms);
           if ($terms) {
@@ -196,7 +213,7 @@ class AnnotationStorage extends ControllerBase {
           }
         }
         else {
-          $bodyContent['value'] = $textualbody->get('field_annotation_value')->getString();
+          $bodyContent['value'] = $textualbody->get('field_annotation_comment')->getString();
         }
         $textualbodies[] = $bodyContent;
       }
@@ -204,19 +221,19 @@ class AnnotationStorage extends ControllerBase {
       $data = [
         'id' => $annotation->get('field_annotation_id')->getString(),
         'textualbodies' => $textualbodies,
-        'target_element' => $annotation->get('field_annotation_target_element')->getString(),
+        'target_element' => $annotation->get('field_annotation_target_field')->getString(),
         'type' => $annotation->get('field_annotation_type')->getString(),
       ];
       switch ($data['type']) {
-        case 'Selection':
-          $data['image_source'] = $annotation->get('field_annotation_image_source')->getString();
-          $data['image_value'] = $annotation->get('field_annotation_image_value')->getString();
+        case 'Image':
+          $data['image_source'] = $annotation->get('field_image_annotation_source')->getString();
+          $data['image_value'] = $annotation->get('field_image_annotation_position')->getString();
           break;
 
-        case 'Annotation':
-          $data['target_end'] = $annotation->get('field_annotation_target_end')->getString();
-          $data['target_exact'] = $annotation->get('field_annotation_target_exact')->getString();
-          $data['target_start'] = $annotation->get('field_annotation_target_start')->getString();
+        case 'Text':
+          $data['target_end'] = $annotation->get('field_text_annotation_end')->getString();
+          $data['target_exact'] = $annotation->get('field_text_annotation_exact')->getString();
+          $data['target_start'] = $annotation->get('field_text_annotation_start')->getString();
           $data['style'] = $style;
           break;
       }
@@ -249,13 +266,11 @@ class AnnotationStorage extends ControllerBase {
       return new JsonResponse('Unable to create annotation due to vocabulary not found! Please select a valid vocabulary in the recogito integration settings for tagging purposes!', 500);
     }
     $body = json_decode($request->getContent(), TRUE);
-    $pageUrl = $body['pageUrl'];
-    $annotationNode = self::createAnnotationNode($body);
-    $collectionNode = self::queryAnnotationCollectionNode($pageUrl);
-    if (!$collectionNode) {
-      $collectionNode = self::createAnnotationCollectionNode($pageUrl);
+    $nid = $body['nodeId'];
+    if (!$nid) {
+      return new JsonResponse('Unable to create annotation due to no node ID being passed.', 500);
     }
-    self::addAnnotationToCollection($annotationNode, $collectionNode);
+    self::createAnnotationNode($body, $nid);
     return new JsonResponse('Annotation created successfully.', 200);
   }
 
@@ -314,32 +329,6 @@ class AnnotationStorage extends ControllerBase {
   }
 
   /**
-   * Creates a new annotation collection node.
-   *
-   * @param string $pageUrl
-   *   The URL of the page to which the annotations belong.
-   *
-   * @return \Drupal\node\Entity\Node
-   *   The newly created annotation collection node.
-   */
-  public function createAnnotationCollectionNode(string $pageUrl) {
-    $params = [
-      'type' => 'annotation_collection',
-      'langcode' => 'en',
-      'created' => time(),
-      'changed' => time(),
-      'uid' => $this->currentUser->id(),
-      'moderation_state' => 'published',
-      'title' => 'Annotations for: ' . $pageUrl,
-      'field_annotation_reference' => [],
-      'field_annotation_collection_url' => $pageUrl,
-    ];
-    $node = Node::create($params);
-    $node->save();
-    return $node;
-  }
-
-  /**
    * Queries the annotation node based on the annotation ID.
    *
    * @param string $annotationId
@@ -360,46 +349,23 @@ class AnnotationStorage extends ControllerBase {
   }
 
   /**
-   * Adds an annotation to an annotation collection node.
+   * Get all annotations for the node.
    *
-   * @param \Drupal\node\Entity\Node $annotationNode
-   *   The annotation node.
-   * @param \Drupal\node\Entity\Node $collectionNode
-   *   The collection node.
-   */
-  public function addAnnotationToCollection(Node $annotationNode, Node $collectionNode) {
-    if (!isset($collectionNode)) {
-      return;
-    }
-    $collectionNode->set('changed', time());
-    $collectionNode->field_annotation_reference[] = $annotationNode->id();
-    $collectionNode->save();
-    if (!isset($annotationNode)) {
-      return;
-    }
-    $annotationNode->set('changed', time());
-    $annotationNode->field_annotation_page[] = $collectionNode->id();
-    $annotationNode->save();
-  }
-
-  /**
-   * Queries the annotation collection node based on the page URL.
-   *
-   * @param string $pageUrl
-   *   The URL of the page.
+   * @param int $nid
+   *   The ID of the node the annotations are for.
    *
    * @return \Drupal\node\Entity\Node
-   *   The annotation collection node.
+   *   The annotation node.
    */
-  public function queryAnnotationCollectionNode(string $pageUrl) {
-    $collectionNodes = $this->entityTypeManager
+  public function getAnnotationForNode(int $nid) {
+    $annotations = $this->entityTypeManager
       ->getStorage('node')
       ->loadByProperties([
-        'type' => 'annotation_collection',
-        'field_annotation_collection_url' => $pageUrl,
+        'type' => 'annotation',
+        'field_annotation_node_reference' => $nid,
         'status' => 1,
       ]);
-    return reset($collectionNodes);
+    return $annotations;
   }
 
   /**
@@ -407,25 +373,20 @@ class AnnotationStorage extends ControllerBase {
    *
    * @param array $textualbody
    *   The textual body data.
-   * @param int $nodeId
-   *   The ID of the annotation node.
    *
-   * @return int
-   *   The ID of the textual body node.
+   * @return array
+   *   The paragraph reference set of the textual body node.
    */
-  public function createTextualbodyNode(array $textualbody, int $nodeId) {
+  public function createTextualbody(array $textualbody) {
     $params = [
       'type' => 'annotation_textualbody',
       'langcode' => 'en',
       'created' => time(),
       'changed' => time(),
       'uid' => $this->currentUser->id(),
-      'moderation_state' => 'published',
-      'title' => (strlen($textualbody['value']) > 255) ? substr($textualbody['value'], 0, 255) : $textualbody['value'],
       'field_annotation_purpose' => $textualbody['purpose'],
-      'field_annotation_created' => $textualbody['created'],
-      'field_annotation_modified' => $textualbody['modified'],
-      'field_annotation_target' => $nodeId,
+      'field_annotation_date_created' => $textualbody['created'],
+      'field_annotation_last_modified' => $textualbody['modified'],
       'field_annotation_creator_id' => $textualbody['creator']['id'],
       'field_annotation_creator_name' => $textualbody['creator']['name'],
     ];
@@ -450,11 +411,14 @@ class AnnotationStorage extends ControllerBase {
       $params['field_annotation_tag_reference'] = $term->id();
     }
     else {
-      $params['field_annotation_value'] = $textual_value;
+      $params['field_annotation_comment'] = $textual_value;
     }
-    $node = Node::create($params);
-    $node->save();
-    return $node->id();
+    $paragraph = Paragraph::create($params);
+    $paragraph->save();
+    return [
+      'target_id' => $paragraph->id(),
+      'target_revision_id' => $paragraph->getRevisionId(),
+    ];
   }
 
   /**
@@ -462,11 +426,13 @@ class AnnotationStorage extends ControllerBase {
    *
    * @param array $annotation
    *   The annotation data.
+   * @param int $nid
+   *   The ID of the node to which the annotation belongs.
    *
    * @return \Drupal\node\Entity\Node
    *   The annotation node.
    */
-  public function createAnnotationNode(array $annotation) {
+  public function createAnnotationNode(array $annotation, int $nid) {
     $params = [
       'type' => 'annotation',
       'langcode' => 'en',
@@ -477,28 +443,28 @@ class AnnotationStorage extends ControllerBase {
       'title' => $annotation['id'],
       'field_annotation_id' => $annotation['id'],
       'field_annotation_type' => $annotation['type'],
-      'field_annotation_page' => [],
-      'field_annotation_target_element' => $annotation['target_element'],
+      'field_annotation_target_field' => $annotation['target_element'],
+      'field_annotation_node_reference' => $nid,
     ];
     switch ($annotation['type']) {
-      case 'Selection':
-        $params['field_annotation_image_source'] = $annotation['image_source'];
-        $params['field_annotation_image_value'] = $annotation['image_value'];
+      case 'Image':
+        $params['field_image_annotation_source'] = $annotation['image_source'];
+        $params['field_image_annotation_position'] = $annotation['image_value'];
         break;
 
-      case 'Annotation':
-        $params['field_annotation_target_end'] = $annotation['target_end'];
-        $params['field_annotation_target_exact'] = $annotation['target_exact'];
-        $params['field_annotation_target_start'] = $annotation['target_start'];
+      case 'Text':
+        $params['field_text_annotation_end'] = $annotation['target_end'];
+        $params['field_text_annotation_exact'] = $annotation['target_exact'];
+        $params['field_text_annotation_start'] = $annotation['target_start'];
         break;
     }
     $node = Node::create($params);
     $node->save();
     $references = [];
     foreach ($annotation['textualbodies'] as $textualbody) {
-      $references[] = self::createTextualbodyNode($textualbody, $node->id());
+      $references[] = self::createTextualbody($textualbody);
     }
-    $node->set('field_annotation_textualbodies', $references);
+    $node->set('field_annotation_textualbody', $references);
     $node->save();
     return $node;
   }
@@ -513,15 +479,15 @@ class AnnotationStorage extends ControllerBase {
    */
   public function updateAnnotationNode(array $annotation, Node $node) {
     $node->set('changed', time());
-    if ($annotation['type'] === 'Selection') {
-      $node->set('field_annotation_image_value', $annotation['image_value']);
+    if ($annotation['type'] === 'Image') {
+      $node->set('field_image_annotation_position', $annotation['image_value']);
     }
     self::deleteTextualbody($node);
     $references = [];
     foreach ($annotation['textualbodies'] as $textualbody) {
-      $references[] = self::createTextualbodyNode($textualbody, $node->id());
+      $references[] = self::createTextualbody($textualbody);
     }
-    $node->set('field_annotation_textualbodies', $references);
+    $node->set('field_annotation_textualbody', $references);
     $node->save();
   }
 
@@ -532,7 +498,7 @@ class AnnotationStorage extends ControllerBase {
    *   The annotation node.
    */
   public function deleteTextualbody(Node $node) {
-    $textualbodies = $node->get('field_annotation_textualbodies')->referencedEntities();
+    $textualbodies = $node->get('field_annotation_textualbody')->referencedEntities();
     foreach ($textualbodies as $textualbody) {
       $textualbody->delete();
     }

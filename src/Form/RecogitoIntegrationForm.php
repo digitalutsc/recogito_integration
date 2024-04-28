@@ -165,7 +165,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       return FALSE;
     }
     $textualbodies = $this->entityTypeManager
-      ->getStorage('node')
+      ->getStorage('paragraph')
       ->loadByProperties([
         'type' => 'annotation_textualbody',
         'field_annotation_purpose' => 'tagging'
@@ -190,11 +190,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
     $content_types = $this->entityTypeManager->getStorage('node_type')->loadMultiple();
     $ct_options = [];
     foreach ($content_types as $ct) {
-      if (!in_array($ct->id(), [
-        'annotation_collection',
-        'annotation',
-        'annotation_textualbody',
-      ])) {
+      if ($ct->id() != 'annotation') {
         $ct_options[$ct->id()] = $ct->label();
       }
     }
@@ -391,11 +387,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
     $config_new = [];
     foreach ($content_types as $ct) {
       $id = $ct->id();
-      if (!in_array($id, [
-        'annotation_collection',
-        'annotation',
-        'annotation_textualbody',
-      ])) {
+      if ($id != 'annotation') {
         $config_new[$id] = $config_content[$id] ?? [];
         $config_new[$id]['enabled'] = $form_state->getValue($id . '_annotatable') ?? 0;
         if ($config_new[$id]['enabled']) {

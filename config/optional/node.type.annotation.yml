@@ -1,12 +1,14 @@
 langcode: en
 status: true
 dependencies:
+  config:
+    - paragraphs.paragraphs_type.annotation_textualbody
   enforced:
     module:
       - recogito_integration
 name: Annotation
 type: annotation
-description: ''
+description: 'Annotations for the Recogito Integration Module.'
 help: ''
 new_revision: true
 preview_mode: 1

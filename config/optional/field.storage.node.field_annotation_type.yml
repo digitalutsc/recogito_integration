@@ -1,20 +1,19 @@
 langcode: en
 status: true
 dependencies:
+  module:
+    - node
   enforced:
     module:
       - recogito_integration
-  module:
-    - field_permissions
-    - node
 id: node.field_annotation_type
 field_name: field_annotation_type
 entity_type: node
 type: string
 settings:
-  max_length: 255
-  is_ascii: false
+  max_length: 16
   case_sensitive: false
+  is_ascii: false
 module: core
 locked: false
 cardinality: 1

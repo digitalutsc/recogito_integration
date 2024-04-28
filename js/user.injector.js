@@ -215,21 +215,21 @@ function getAnnotations(settings) {
     url: '/recogito_integration/get',
     dataType: 'json',
     headers: {
-      'pageurl': '/node/' + settings.nodeId
+      'nodeId': settings.nodeId
     },
     success: function(data) {
       data = JSON.parse(data);
       for (let content of data) {
         let annotation = AnnotationConverter.convertDataToW3C(content);
         switch (annotation.type) {
-          case 'Annotation':
+          case 'Text':
             if (textAnnotations[annotation.target_element]) {
               for (let annotationInstance of textAnnotations[annotation.target_element]) {
                 addAnnotation(annotationInstance, annotation);
               }
             }
             break;
-          case 'Selection':
+          case 'Image':
             if (imageAnnotations[annotation.target_element]) {
               for (let annotationInstance of imageAnnotations[annotation.target_element]) {
                 if (annotationInstance.targetSrc === annotation.target.source) {

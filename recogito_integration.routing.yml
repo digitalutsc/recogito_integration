@@ -38,9 +38,6 @@ recogito_settings:
   requirements:
     _permission: 'administer site configuration'
 
-recogito_admin_manage:
-  path: '/admin/content/annotation/collection'
-
 recogito_annotate_node:
   path: '/node/{node}/annotate'
   defaults:
