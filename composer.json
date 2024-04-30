@@ -1,0 +1,46 @@
+{
+  "name": "digitalutsc/recogito_integration",
+  "type": "drupal-module",
+  "description": "This module provide a way to annotate nodes using the Recogito JS and Annotorious libraries.",
+  "keywords": [
+      "annotate",
+      "annotations",
+      "recogito",
+      "recogito-js",
+      "annotorious",
+      "image-annotation"
+  ],
+  "homepage": "https://www.drupal.org/project/recogito_integration",
+  "minimum-stability": "dev",
+  "license": "GPL-2.0-only",
+  "support": {
+      "issues": "https://www.drupal.org/project/issues/recogito_integration",
+      "source": "https://git.drupalcode.org/project/recogito_integration"
+  },
+  "authors": [
+      {
+          "name": "The University of Toronto Scarborough Library's Digital Scholarship Unit (DSU)",
+          "email": "digitalscholarship@utsc.utoronto.ca",
+          "role": "Owner"
+      },
+      {
+          "name": "Kyle Huynh",
+          "email": "kyle.huynh205@gmail.com",
+          "role": "Maintainer"
+      },
+      {
+          "name": "Wenbin Zhang",
+          "email": "fghjru1@gmail.com",
+          "role": "Maintainer"
+      }
+  ],
+  "repositories": {
+      "drupal": {
+          "type": "composer",
+          "url": "https://packages.drupal.org/8"
+      }
+  },
+  "require": {
+      "drupal/paragraphs": "^1.17"
+  }
+}

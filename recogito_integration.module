@@ -23,16 +23,16 @@ use Drupal\Core\Form\FormStateInterface;
  * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
  */
 function recogito_integration_page_attachments(array &$attachments) {
+  $routeName = \Drupal::routeMatch()->getRouteName();
+  if (!in_array($routeName, ['entity.node.canonical', 'recogito_annotate_node'])) {
+    return;
+  }
   $currentUser = \Drupal::currentUser();
   $viewPerm = $currentUser->hasPermission('recogito view annotations');
   if (!$viewPerm) {
     return;
   }
   $createPerm = $currentUser->hasPermission('recogito create annotations');
-  $routeName = \Drupal::routeMatch()->getRouteName();
-  if (!in_array($routeName, ['entity.node.canonical', 'recogito_annotate_node'])) {
-    return;
-  }
   $config = \Drupal::config('recogito_integration.settings');
   $annotatables = $config->get('recogito_integration.annotatables') ?? [];
   $node = \Drupal::routeMatch()->getParameter('node');
@@ -55,7 +55,7 @@ function recogito_integration_page_attachments(array &$attachments) {
     $attached = [
       'permissions' => $perms,
       'userData' => [
-        'id' => \Drupal::request()->getHost() . '/user/' . $currentUser->id(),
+        'id' => $currentUser->id(),
         'displayName' => $currentUser->getDisplayName(),
       ],
       'admin' => $currentUser->isAuthenticated(),
@@ -93,7 +93,7 @@ function recogito_integration_page_attachments(array &$attachments) {
   $attached['annotatable_fields'] = $annotatables[$node->getType()]['fields'];
 
   if ($config->get('recogito_integration.custom_annotations')) {
-    $attached['custom_elements'] = explode('\n', $config->get('recogito_integration.custom_annotations_elements') ?? '');
+    $attached['custom_elements'] = preg_split("/\r?\n/", $config->get('recogito_integration.custom_annotations_elements') ?? '');
   }
   else {
     $attached['custom_elements'] = [];
@@ -106,7 +106,7 @@ function recogito_integration_page_attachments(array &$attachments) {
       break;
 
     case 'recogito_annotate_node':
-      if ($createPerm) {
+      if ($createPerm && $currentUser->isAuthenticated()) {
         $attachments['#attached']['library'][] = 'recogito_integration/recogito_admin';
       }
       break;

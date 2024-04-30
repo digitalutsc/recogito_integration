@@ -99,7 +99,7 @@ class RecogitoIntegrationController extends ControllerBase {
       return AccessResult::allowedIf(FALSE)->addCacheableDependency($config);
     }
     $access = $annotatables[$node->getType()]['enabled'] ?? FALSE;
-    $access = $access && $this->currentUser->hasPermission('recogito create annotations');
+    $access = $access && $this->currentUser->hasPermission('recogito create annotations') && $this->currentUser->isAuthenticated();
     return AccessResult::allowedIf($access)->addCacheableDependency($config);
   }
 

@@ -132,7 +132,8 @@ function initRecogito(domObj, settings) {
       vocabulary: tagList,
       textPlaceHolder: 'Add tags by typing here and pressing Enter...'}
     ],
-    readOnly: !perms['create']
+    readOnly: !perms['create'],
+    allowEmpty: false,
   });
   txtAnnotation.setAuthInfo(userData);
   txtAnnotation.target = target;
@@ -145,7 +146,7 @@ function initRecogito(domObj, settings) {
     clearSelected();
     let editable = perms['edit'] || (perms['edit-own'] && userData['id'] === annotation.body[0].creator.id);
     if (!editable) {
-      setTimeout(() => readOnlyText, 3);
+      setTimeout(() => readOnlyText(), 3);
       return;
     }
     setTimeout(() => updateMenuByPermissions(settings, annotation), 3);
@@ -375,7 +376,8 @@ function initAnnotorious(imgObj, settings) {
       vocabulary: tagList,
       textPlaceHolder: 'Add tags by typing here and pressing Enter...'}
     ],
-    readOnly: !perms['create']
+    readOnly: !perms['create'],
+    allowEmpty: false,
   });
   imgAnnotation.setAuthInfo(userData);
   imgAnnotation.target = target;

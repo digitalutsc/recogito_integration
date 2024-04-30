@@ -3,13 +3,38 @@ status: true
 dependencies:
   config:
     - field.field.paragraph.annotation_textualbody.field_annotation_comment
-    - field.field.paragraph.annotation_textualbody.field_annotation_creator_id
-    - field.field.paragraph.annotation_textualbody.field_annotation_creator_name
+    - field.field.paragraph.annotation_textualbody.field_annotation_creator
     - field.field.paragraph.annotation_textualbody.field_annotation_date_created
     - field.field.paragraph.annotation_textualbody.field_annotation_last_modified
     - field.field.paragraph.annotation_textualbody.field_annotation_purpose
     - field.field.paragraph.annotation_textualbody.field_annotation_tag_reference
     - paragraphs.paragraphs_type.annotation_textualbody
+  module:
+    - field_group
+  enforced:
+    module:
+      - recogito_integration
+third_party_settings:
+  field_group:
+    group_textualbody_tab:
+      children:
+        - field_annotation_date_created
+        - field_annotation_last_modified
+        - field_annotation_purpose
+        - field_annotation_comment
+        - field_annotation_tag_reference
+        - field_annotation_creator
+      label: Textualbody
+      parent_name: ''
+      region: content
+      weight: 0
+      format_type: tab
+      format_settings:
+        classes: ''
+        show_empty_fields: false
+        id: ''
+        formatter: closed
+        description: ''
 id: paragraph.annotation_textualbody.default
 targetEntityType: paragraph
 bundle: annotation_textualbody
@@ -20,21 +45,15 @@ content:
     label: above
     settings: {  }
     third_party_settings: {  }
-    weight: 0
+    weight: 1
     region: content
-  field_annotation_creator_id:
-    type: basic_string
+  field_annotation_creator:
+    type: entity_reference_label
     label: above
-    settings: {  }
+    settings:
+      link: true
     third_party_settings: {  }
-    weight: 0
-    region: content
-  field_annotation_creator_name:
-    type: basic_string
-    label: above
-    settings: {  }
-    third_party_settings: {  }
-    weight: 0
+    weight: 3
     region: content
   field_annotation_date_created:
     type: string
@@ -42,7 +61,7 @@ content:
     settings:
       link_to_entity: false
     third_party_settings: {  }
-    weight: 0
+    weight: 4
     region: content
   field_annotation_last_modified:
     type: string
@@ -50,7 +69,7 @@ content:
     settings:
       link_to_entity: false
     third_party_settings: {  }
-    weight: 0
+    weight: 5
     region: content
   field_annotation_purpose:
     type: string
@@ -66,7 +85,7 @@ content:
     settings:
       link: true
     third_party_settings: {  }
-    weight: 0
+    weight: 2
     region: content
 hidden:
   search_api_excerpt: true

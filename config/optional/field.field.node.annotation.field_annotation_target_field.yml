@@ -12,7 +12,7 @@ field_name: field_annotation_target_field
 entity_type: node
 bundle: annotation
 label: 'Target Field'
-description: ''
+description: 'The field this annotation is targetting.'
 required: false
 translatable: false
 default_value: {  }

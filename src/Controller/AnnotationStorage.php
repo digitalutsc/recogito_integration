@@ -8,7 +8,6 @@ use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountProxyInterface;
-use Drupal\node\NodeInterface;
 use Drupal\node\Entity\Node;
 use Drupal\paragraphs\Entity\Paragraph;
 use Drupal\taxonomy\Entity\Term;
@@ -195,19 +194,27 @@ class AnnotationStorage extends ControllerBase {
       $tags = [];
       $textualbodyParagraphs = $annotation->get('field_annotation_textualbody')->referencedEntities();
       foreach ($textualbodyParagraphs as $textualbody) {
+        $textualOwner = $textualbody->get('field_annotation_creator')->entity;
         $bodyContent = [
           'created' => $textualbody->get('field_annotation_date_created')->getString(),
-          'creator' => [
-            'id' => $textualbody->get('field_annotation_creator_id')->getString(),
-            'name' => $textualbody->get('field_annotation_creator_name')->getString(),
-          ],
           'modified' => $textualbody->get('field_annotation_last_modified')->getString(),
           'purpose' => $textualbody->get('field_annotation_purpose')->getString(),
         ];
+        if ($textualOwner) {
+          $bodyContent['creator'] = [
+            'id' => $textualOwner->id(),
+            'name' => $textualOwner->getDisplayName(),
+          ];
+        }
+        else {
+          $bodyContent['creator'] = [
+            'id' => NULL,
+            'name' => 'Anonymous',
+          ];
+        }
         if ($bodyContent['purpose'] === 'tagging') {
-          $terms = $textualbody->get('field_annotation_tag_reference')->referencedEntities();
-          $tag = reset($terms);
-          if ($terms) {
+          $tag = $textualbody->get('field_annotation_tag_reference')->entity;
+          if ($tag) {
             $tags[] = $tag;
             $bodyContent['value'] = $tag->getName();
           }
@@ -378,18 +385,20 @@ class AnnotationStorage extends ControllerBase {
    *   The paragraph reference set of the textual body node.
    */
   public function createTextualbody(array $textualbody) {
+    if (!$textualbody['modified']) {
+      $textualbody['modified'] = $textualbody['created'];
+    }
     $params = [
       'type' => 'annotation_textualbody',
       'langcode' => 'en',
       'created' => time(),
-      'changed' => time(),
-      'uid' => $this->currentUser->id(),
       'field_annotation_purpose' => $textualbody['purpose'],
       'field_annotation_date_created' => $textualbody['created'],
       'field_annotation_last_modified' => $textualbody['modified'],
-      'field_annotation_creator_id' => $textualbody['creator']['id'],
-      'field_annotation_creator_name' => $textualbody['creator']['name'],
     ];
+    if ($textualbody['creator']['id']) {
+      $params['field_annotation_creator'] = $textualbody['creator']['id'];
+    }
     $config = $this->configFactory->get('recogito_integration.settings');
     $vocabulary = $config->get('recogito_integration.vocabulary_name');
     $textual_value = urldecode($textualbody['value']);
@@ -443,7 +452,7 @@ class AnnotationStorage extends ControllerBase {
       'title' => $annotation['id'],
       'field_annotation_id' => $annotation['id'],
       'field_annotation_type' => $annotation['type'],
-      'field_annotation_target_field' => $annotation['target_element'],
+      'field_annotation_target_field' => urldecode($annotation['target_element']),
       'field_annotation_node_reference' => $nid,
     ];
     switch ($annotation['type']) {
@@ -482,13 +491,78 @@ class AnnotationStorage extends ControllerBase {
     if ($annotation['type'] === 'Image') {
       $node->set('field_image_annotation_position', $annotation['image_value']);
     }
-    self::deleteTextualbody($node);
+    $textualbodies = $node->get('field_annotation_textualbody')->referencedEntities();
+    $count = 0;
+    $textualbodyCount = count($annotation['textualbodies']);
     $references = [];
-    foreach ($annotation['textualbodies'] as $textualbody) {
-      $references[] = self::createTextualbody($textualbody);
+    foreach ($textualbodies as $textualbody) {
+      if ($count >= $textualbodyCount) {
+        $textualbody->delete();
+      }
+      else {
+        $references[] = self::updateTextualbody($annotation['textualbodies'][$count], $textualbody);
+      }
+      $count++;
+    }
+    if ($count < $textualbodyCount) {
+      for ($i = $count; $i < $textualbodyCount; $i++) {
+        $references[] = self::createTextualbody($annotation['textualbodies'][$i]);
+      }
     }
     $node->set('field_annotation_textualbody', $references);
     $node->save();
+  }
+
+  /**
+   * Updates a textual body paragraph based on the textual body data.
+   *
+   * @param array $textualbody
+   *   The textual body data.
+   * @param \Drupal\paragraphs\Entity\Paragraph $paragraph
+   *   The textual body paragraph.
+   *
+   * @return array
+   *   The paragraph reference set of the textual body paragraph.
+   */
+  public function updateTextualbody(array $textualbody, Paragraph $paragraph) {
+    $paragraph->set('created', time());
+    $paragraph->set('field_annotation_purpose', $textualbody['purpose']);
+    $paragraph->set('field_annotation_date_created', $textualbody['created']);
+    if (!$textualbody['modified']) {
+      $textualbody['modified'] = $textualbody['created'];
+    }
+    $paragraph->set('field_annotation_last_modified', $textualbody['modified']);
+    $paragraph->set('field_annotation_creator', $textualbody['creator']['id']);
+    $paragraph->set('field_annotation_comment', NULL);
+    $paragraph->set('field_annotation_tag_reference', NULL);
+    $config = $this->configFactory->get('recogito_integration.settings');
+    $vocabulary = $config->get('recogito_integration.vocabulary_name');
+    $textual_value = urldecode($textualbody['value']);
+    if ($textualbody['purpose'] == 'tagging') {
+      $terms = $this->entityTypeManager
+        ->getStorage('taxonomy_term')
+        ->loadByProperties([
+          'name' => $textual_value,
+          'vid' => $vocabulary,
+        ]);
+      $term = reset($terms);
+      if (!$term) {
+        $term = Term::create([
+          'name' => $textual_value,
+          'vid' => $vocabulary,
+        ]);
+        $term->save();
+      }
+      $paragraph->set('field_annotation_tag_reference', $term->id());
+    }
+    else {
+      $paragraph->set('field_annotation_comment', $textual_value);
+    }
+    $paragraph->save();
+    return [
+      'target_id' => $paragraph->id(),
+      'target_revision_id' => $paragraph->getRevisionId(),
+    ];
   }
 
   /**

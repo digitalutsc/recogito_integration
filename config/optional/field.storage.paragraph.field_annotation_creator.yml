@@ -3,15 +3,13 @@ status: true
 dependencies:
   module:
     - paragraphs
-  enforced:
-    module:
-      - recogito_integration
-id: paragraph.field_annotation_creator_name
-field_name: field_annotation_creator_name
+    - user
+id: paragraph.field_annotation_creator
+field_name: field_annotation_creator
 entity_type: paragraph
-type: string_long
+type: entity_reference
 settings:
-  case_sensitive: false
+  target_type: user
 module: core
 locked: false
 cardinality: 1
