@@ -296,6 +296,23 @@ function updateMenuByPermissions(settings, annotation) {
 }
 
 /**
+ * Submits tags to the tagging input box.
+ * 
+ * @param {object} inputBox 
+ * @param {string} tag 
+ */
+function submitTag(inputBox, tag) {
+  let entryDom = inputBox.get(0);
+  return new Promise((resolve) => {
+    inputBox.val(tag);
+    entryDom.dispatchEvent(new InputEvent('input'));
+    resolve();
+  }).then(() => {
+    entryDom.dispatchEvent(new KeyboardEvent('keydown', {which: 13}));
+  });
+}
+
+/**
  * Attach default tags to the annotations. For visual purposes.
  * 
  * @param {object} defaultTags 
@@ -309,16 +326,13 @@ function attachDefaultTags(defaultTags) {
     return;
   }
   element.addClass('default-tags');
-  let ul = $('<ul>', { class: 'r6o-taglist default-tags'});
-  let presetTag = $('<div>', { text: 'Preset Tags:', class: 'r6o-defaultLabel' });
-  ul.prepend(presetTag);
+  let tagEntry = $('#page').find('.r6o-autocomplete').find('input').first();
+  let promiseChain = Promise.resolve();
   for (let i in defaultTags) {
-    let li = $('<li>');
-    let span = $('<span>', { class: 'r6o-label', text: defaultTags[i] });
-    li.append(span);
-    ul.append(li);
+    promiseChain = promiseChain.then(() => {
+      return submitTag(tagEntry, defaultTags[i]);
+    });
   }
-  element.prepend(ul);
 }
 
 /**
