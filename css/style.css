@@ -15,15 +15,6 @@
   overflow: auto;
 }
 
-.r6o-tag-option:hover {
-  background: #f5f5f5;
-}
-
-.r6o-tag-option:hover .r6o-btn {
-  background-color:#4f92d7;
-  border-color:#4f92d7;
-}
-
 .r6o-tag-button {
   width: 100%;
   margin-top: 4px !important;
@@ -55,6 +46,17 @@
   -webkit-user-select: none; /* Safari */
   -ms-user-select: none; /* IE 10 and IE 11 */
   user-select: none; /* Standard syntax */
+  font-size: 12px;
+  height: var(--sp2);
+}
+
+.r6o-tag-option:hover {
+  background: #f5f5f5;
+}
+
+.r6o-tag-option:hover .r6o-btn {
+  background-color:#4f92d7;
+  border-color:#4f92d7;
 }
 
 .r6o-tag-search {

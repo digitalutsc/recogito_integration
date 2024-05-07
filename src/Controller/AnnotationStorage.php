@@ -418,6 +418,9 @@ class AnnotationStorage extends ControllerBase {
         ]);
         $term->save();
       }
+      else if (!$term && !$tag_creation) {
+        return NULL;
+      }
       if ($term) {
         $params['field_annotation_tag_reference'] = $term->id();
       }
@@ -474,7 +477,10 @@ class AnnotationStorage extends ControllerBase {
     $node->save();
     $references = [];
     foreach ($annotation['textualbodies'] as $textualbody) {
-      $references[] = self::createTextualbody($textualbody);
+      $body = self::createTextualbody($textualbody);
+      if ($body) {
+        $references[] = $body;
+      }
     }
     $node->set('field_annotation_textualbody', $references);
     $node->save();
@@ -494,22 +500,29 @@ class AnnotationStorage extends ControllerBase {
     if ($annotation['type'] === 'Image') {
       $node->set('field_image_annotation_position', $annotation['image_value']);
     }
-    $textualbodies = $node->get('field_annotation_textualbody')->referencedEntities();
+    $existingTextualbodies = $node->get('field_annotation_textualbody')->referencedEntities();
+    $existingCount = count($existingTextualbodies);
     $count = 0;
-    $textualbodyCount = count($annotation['textualbodies']);
     $references = [];
-    foreach ($textualbodies as $textualbody) {
-      if ($count >= $textualbodyCount) {
-        $textualbody->delete();
+    foreach ($annotation['textualbodies'] as $textualbody) {
+      $body = NULL;
+      if ($count >= $existingCount) {
+        $body = self::createTextualbody($textualbody);
       }
       else {
-        $references[] = self::updateTextualbody($annotation['textualbodies'][$count], $textualbody);
+        $body = self::updateTextualbody($textualbody, $existingTextualbodies[$count]);
+      }
+      if ($body) {
+        $references[] = $body;
+      }
+      else {
+        continue;
       }
       $count++;
     }
-    if ($count < $textualbodyCount) {
-      for ($i = $count; $i < $textualbodyCount; $i++) {
-        $references[] = self::createTextualbody($annotation['textualbodies'][$i]);
+    if ($count < $existingCount) {
+      for ($i = $count; $i < $existingCount; $i++) {
+        $existingTextualbodies[$i]->delete();
       }
     }
     $node->set('field_annotation_textualbody', $references);
@@ -556,6 +569,9 @@ class AnnotationStorage extends ControllerBase {
           'vid' => $vocabulary,
         ]);
         $term->save();
+      }
+      else if (!$term && !$tag_creation) {
+        return NULL;
       }
       if ($term) {
         $paragraph->set('field_annotation_tag_reference', $term->id());

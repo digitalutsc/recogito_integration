@@ -513,18 +513,6 @@ function attachTagSelector(tags) {
     </label>`);
     let addOption = $('<button class="r6o-tag-add r6o-btn">Add</button>');
     let removeOption = $('<button class="r6o-tag-remove r6o-btn">Remove</button>');
-    removeOption.on('click', function(event) {
-      event.stopPropagation();
-      removeTag(value);
-      removeOption.hide();
-      addOption.show();
-    });
-    addOption.on('click', function(event) {
-      event.stopPropagation();
-      submitTag(tagEntry, value);
-      addOption.hide();
-      removeOption.show();
-    });
     option.append(addOption);
     if (currentTag.includes(value)) {
       addOption.hide();
