@@ -94,7 +94,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
   }
 
   /**
-   * Provide a selection form based on selected vocabulary.
+   * Provide a form based on selected vocabulary.
    *
    * Callback occurs when a vocabulary is selected.
    *
@@ -107,7 +107,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
    *   The field form element that will be inserted into the container.
    */
   public function vocabularyCallback(array &$form, FormStateInterface $form_state) {
-    return $form['tag_set']['default_term_container'];
+    return $form['tag_set']['term_settings_container'];
   }
 
   /**
@@ -351,20 +351,41 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       '#disabled' => $lockedSelection,
       '#ajax' => [
         'callback' => '::vocabularyCallback',
-        'wrapper' => 'default_term_container'
+        'wrapper' => 'term_settings_container'
       ],
-      '#description' => $this->t($tag_description)
+      '#description' => $this->t($tag_description),
+      '#required' => TRUE,
     ];
 
-    $form['tag_set']['default_term_container'] = [
+    $form['tag_set']['tag_text_input'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Enable tag text input for new tags.'),
+      '#description' => 'If enabled, users can input new tags during annotation creation given that the tag creation option is enabled.',
+      '#default_value' => $config->get('recogito_integration.tag_text_input') ?? 1,
+    ];
+
+    $form['tag_set']['tag_selector'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Enable tag selection for existing tags.'),
+      '#description' => 'If enabled, users can select existing tags during annotation creation. This input does not support tag creation.',
+      '#default_value' => $config->get('recogito_integration.tag_selector') ?? 0,
+    ];
+
+    $form['tag_set']['term_settings_container'] = [
       '#type' => 'container',
-      '#attributes' => ['id' => 'default_term_container'],
+      '#attributes' => ['id' => 'term_settings_container'],
     ];
 
     $current_value = $form_state->getValue('vocabulary_name');
     $selected_vocab = $current_value ?? $config_vocab;
     if (($current_value === NULL && $config_vocab ?? FALSE) || $current_value) {
-      $form['tag_set']['default_term_container']['default_tag'] = [
+      $form['tag_set']['term_settings_container']['create_nonexistent_tag'] = [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Enable tag creation for non-existent tags.'),
+        '#description' => 'If enabled, users can create new tags during annotation creation. Only supports raw tag text input!',
+        '#default_value' => $config->get('recogito_integration.create_nonexistent_tag') ?? 1,
+      ];
+      $form['tag_set']['term_settings_container']['default_tag'] = [
         '#type' => 'select',
         '#multiple' => TRUE,
         '#title' => $this->t('Select Default Tags'),
@@ -373,8 +394,23 @@ class RecogitoIntegrationForm extends ConfigFormBase {
         '#description' => $this->t('Select the default tag assigned to newly created annotation!'),
       ];
     }
-
+    $form['#validate'][] = '::validateVocabularyName';
     return $form;
+  }
+
+  /**
+   * Validate the vocabulary name.
+   *
+   * @param array $form
+   *   The form array.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   */
+  public function validateVocabularyName(array &$form, FormStateInterface $form_state) {
+    $vocabulary_name = $form_state->getValue('vocabulary_name');
+    if ($vocabulary_name === '') {
+      $form_state->setErrorByName('vocabulary_name', $this->t('Please select a vocabulary.'));
+    }
   }
 
   /**
@@ -410,7 +446,10 @@ class RecogitoIntegrationForm extends ConfigFormBase {
     $config->set('recogito_integration.underline_stroke', $form_state->getValue('underline_stroke'));
     $config->set('recogito_integration.underline_style', $form_state->getValue('underline_style'));
     $config->set('recogito_integration.vocabulary_name', $form_state->getValue('vocabulary_name'));
+    $config->set('recogito_integration.tag_text_input', $form_state->getValue('tag_text_input'));
+    $config->set('recogito_integration.tag_selector', $form_state->getValue('tag_selector'));
     $config->set('recogito_integration.default_tag', $form_state->getValue('default_tag') ?? []);
+    $config->set('recogito_integration.create_nonexistent_tag', $form_state->getValue('create_nonexistent_tag') ?? 1);
     $config->save();
     if ($config_new != $config_content) {
       $this->cacheTagsInvalidator->invalidateTags(['rendered']);

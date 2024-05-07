@@ -165,6 +165,28 @@ function initAnnotorious(imgObj, settings) {
     imageAnnotations[imgAnnotation.target] = [];
   }
   imageAnnotations[imgAnnotation.target].push(imgAnnotation);
+
+  imgAnnotation.on('selectAnnotation', function(annotation) {
+    clearSelectedForImage(annotation.id);
+  });
+}
+
+/**
+ * Clear all selected annotations but for image annotation selects. Treat each as cancel button click.
+ */
+function clearSelectedForImage(annotationId) {
+  $('#page').find('.r6o-editor').each(
+    function() {
+      let annotationEle = $(this).parent().parent().find(`.a9s-annotation[data-id="${annotationId}"]`);
+      if (annotationEle.length <= 0) {
+        $(this).find('.r6o-footer').find('.close-annotation, .cancel-annotation').each(
+          function() {
+            $(this).click();
+          }
+        );
+      }
+    }
+  );
 }
 
 /**
@@ -223,6 +245,7 @@ function getAnnotations(settings) {
         let annotation = AnnotationConverter.convertDataToW3C(content);
         switch (annotation.type) {
           case 'Text':
+            annotation.type = 'Annotation';
             if (textAnnotations[annotation.target_element]) {
               for (let annotationInstance of textAnnotations[annotation.target_element]) {
                 addAnnotation(annotationInstance, annotation);
@@ -230,6 +253,7 @@ function getAnnotations(settings) {
             }
             break;
           case 'Image':
+            annotation.type = 'Annotation';
             if (imageAnnotations[annotation.target_element]) {
               for (let annotationInstance of imageAnnotations[annotation.target_element]) {
                 if (annotationInstance.targetSrc === annotation.target.source) {

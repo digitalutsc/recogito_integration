@@ -81,6 +81,9 @@ function recogito_integration_page_attachments(array &$attachments) {
     $attached['tagOptions'] = [
       'defaultTags' => $defaultTags,
       'tagList' => $termList,
+      'selector' => $config->get('recogito_integration.tag_selector') ?? 0,
+      'textInput' => $config->get('recogito_integration.tag_text_input') ?? 1,
+      'createNewTag' => $config->get('recogito_integration.create_nonexistent_tag') ?? 1,
     ];
   }
   else {

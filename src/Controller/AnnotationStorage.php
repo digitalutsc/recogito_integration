@@ -401,6 +401,7 @@ class AnnotationStorage extends ControllerBase {
     }
     $config = $this->configFactory->get('recogito_integration.settings');
     $vocabulary = $config->get('recogito_integration.vocabulary_name');
+    $tag_creation = $config->get('recogito_integration.create_nonexistent_tag');
     $textual_value = urldecode($textualbody['value']);
     if ($textualbody['purpose'] == 'tagging') {
       $terms = $this->entityTypeManager
@@ -410,14 +411,16 @@ class AnnotationStorage extends ControllerBase {
           'vid' => $vocabulary,
         ]);
       $term = reset($terms);
-      if (!$term) {
+      if (!$term && $tag_creation) {
         $term = Term::create([
           'name' => $textual_value,
           'vid' => $vocabulary,
         ]);
         $term->save();
       }
-      $params['field_annotation_tag_reference'] = $term->id();
+      if ($term) {
+        $params['field_annotation_tag_reference'] = $term->id();
+      }
     }
     else {
       $params['field_annotation_comment'] = $textual_value;
@@ -537,6 +540,7 @@ class AnnotationStorage extends ControllerBase {
     $paragraph->set('field_annotation_tag_reference', NULL);
     $config = $this->configFactory->get('recogito_integration.settings');
     $vocabulary = $config->get('recogito_integration.vocabulary_name');
+    $tag_creation = $config->get('recogito_integration.create_nonexistent_tag');
     $textual_value = urldecode($textualbody['value']);
     if ($textualbody['purpose'] == 'tagging') {
       $terms = $this->entityTypeManager
@@ -546,14 +550,16 @@ class AnnotationStorage extends ControllerBase {
           'vid' => $vocabulary,
         ]);
       $term = reset($terms);
-      if (!$term) {
+      if (!$term && $tag_creation) {
         $term = Term::create([
           'name' => $textual_value,
           'vid' => $vocabulary,
         ]);
         $term->save();
       }
-      $paragraph->set('field_annotation_tag_reference', $term->id());
+      if ($term) {
+        $paragraph->set('field_annotation_tag_reference', $term->id());
+      }
     }
     else {
       $paragraph->set('field_annotation_comment', $textual_value);

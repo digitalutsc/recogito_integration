@@ -105,7 +105,7 @@ function initComponents(domObj, settings) {
     });
   }
   initRecogito(domObj, settings);
-  attachDefaultTagsEvent(domObj, settings.tagOptions.defaultTags);
+  attachTagsEvent(domObj, settings.tagOptions);
 }
 
 /**
@@ -118,6 +118,9 @@ function initRecogito(domObj, settings) {
   let userData = settings.userData;
   let tagList = settings.tagOptions.tagList;
   let defaultTags = settings.tagOptions.defaultTags;
+  let tagSelector = settings.tagOptions.selector;
+  let tagTextEntry = settings.tagOptions.textInput;
+  let createTag = settings.tagOptions.createNewTag;
   let perms = settings.permissions;
   let target = settings.current_target;
   domObj.css({
@@ -150,6 +153,13 @@ function initRecogito(domObj, settings) {
       return;
     }
     setTimeout(() => updateMenuByPermissions(settings, annotation), 3);
+    if (!tagTextEntry) {
+      setTimeout(() => hideTagInput(), 3);
+    }
+    if (tagSelector) {
+      setTimeout(() => attachTagSelector(tagList), 3);
+    }
+    setTimeout(() => attachTagList(settings.tagOptions), 3);
   });
 
   txtAnnotation.on('createAnnotation', function(annotation) {
@@ -162,6 +172,9 @@ function initRecogito(domObj, settings) {
     annotation.target_element = target;
     removeDuplicateTags(annotation);
     annotation.node_id = settings.nodeId;
+    if (!createTag) {
+      removeNonExistentTags(annotation, tagList);
+    }
     annotation.type = 'Text';
     createAnnotation(annotation);
   });
@@ -181,6 +194,10 @@ function initRecogito(domObj, settings) {
     }
     if (JSON.stringify(annotation) !== JSON.stringify(previous)) {
       removeDuplicateTags(annotation);
+      if (!createTag) {
+        removeNonExistentTags(annotation, tagList);
+      }
+      annotation.type = 'Text';
       updateAnnotation(annotation);
       return;
     }
@@ -207,15 +224,12 @@ function initRecogito(domObj, settings) {
 }
 
 /**
- * Update the default tags based on the changes in the DOM.
+ * Update the tag functionality based on the changes in the DOM.
  * 
  * @param {object} domObj 
  * @param {object} defaultTags 
  */
-function attachDefaultTagsEvent(domObj, defaultTags) {
-  if (defaultTags.length <= 0) {
-    return;
-  }
+function attachTagsEvent(domObj, tagOptions) {
   let observer = new MutationObserver(function(mutations) {
     for (let mutation of mutations) {
       if (mutation.type === 'childList') {
@@ -227,13 +241,133 @@ function attachDefaultTagsEvent(domObj, defaultTags) {
           if ((node.tagName === 'SPAN' && node.classList.contains('r6o-selection')) || 
               (node.tagName === 'g' && node.querySelector('.a9s-annotation.editable.selected[data-id="undefined"]'))) {
             clearSelected();
-            setTimeout(() => attachDefaultTags(defaultTags), 3);
+            if (tagOptions.defaultTags.length > 0) {
+              setTimeout(() => attachDefaultTags(tagOptions.defaultTags), 3);
+            }
+            if (!tagOptions.textInput) {
+              setTimeout(() => hideTagInput(), 3);
+            }
+            if (tagOptions.selector) {
+              setTimeout(() => attachTagSelector(tagOptions.tagList), 3);
+            }
+            setTimeout(() => attachTagList(tagOptions), 3);
           }
         }
       }
     }
   });
   observer.observe(domObj[0], { childList: true, subtree: true });
+}
+
+/**
+ * Attach the tag list of the editor to remove duplicates or monitor list for tag selector.
+ */
+function attachTagList(tagOptions) {
+  let tagObject = $('#page').find('.r6o-tag').first();
+  let tagList = tagOptions.tagList;
+  let createTag = tagOptions.createNewTag;
+  let selector = tagOptions.selector;
+  let selectorList = $('#page').find('.r6o-tag-lister').first();
+  let observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.type === 'childList') {
+        mutation.addedNodes.forEach(function(node) {
+          if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'LI') {
+            let tagContent = node.querySelector('span.r6o-label')?.textContent;
+            if (!tagContent) {
+              return;
+            }
+            if (!createTag && !tagList.includes(tagContent)) {
+              node.remove();
+            }
+            if (isInCurrentTags(tagContent)) {
+              node.remove();
+            }
+            if (selector) {
+              let option = selectorList.find('.r6o-tag-option').find(`div:contains('${tagContent}')`).first().parent();
+              option.find('.r6o-tag-add').hide();
+              option.find('.r6o-tag-remove').show();
+            }
+          }
+        });
+        if (selector) {
+          mutation.removedNodes.forEach(function(node) {
+            if (node.nodeType !== Node.ELEMENT_NODE) {
+              return;
+            }
+            if (node.tagName === 'LI') {
+              let tagContent = node.querySelector('span.r6o-label')?.textContent;
+              if (!tagContent) {
+                return;
+              }
+              let option = selectorList.find('.r6o-tag-option').find(`div:contains('${tagContent}')`).first().parent();
+              option.find('.r6o-tag-add').show();
+              option.find('.r6o-tag-remove').hide();
+            }
+            else if (node.tagName === 'UL') {
+              let tag = node.querySelector('li span.r6o-label');
+              if (tag) {
+                let tagContent = tag.textContent;
+                let option = selectorList.find('.r6o-tag-option').find(`div:contains('${tagContent}')`).first().parent();
+                option.find('.r6o-tag-add').show();
+                option.find('.r6o-tag-remove').hide();
+              }
+            }
+          });
+        }
+      }
+    });
+  });
+  observer.observe(tagObject[0], { childList: true, subtree: true });
+}
+
+/**
+ * Check if the tag is in the current list of tags from the tag list.
+ */
+function isInCurrentTags(tag) {
+  let found = false;
+  $('#page').find('.r6o-taglist').find('li:not(:last)').each(
+    function() {
+      if ($(this).find('.r6o-label').first().text() == tag) {
+        found = true;
+        return;
+      }
+    }
+  );
+  return found;
+}
+
+/**
+ * Fetch the current list of tags from the tag list
+ * 
+ * @returns {array} tags
+ */
+function fetchCurrentTags() {
+  let tags = [];
+  $('#page').find('.r6o-taglist').find('li').each(
+    function() {
+      tags.push($(this).find('.r6o-label').first().text());
+    }
+  );
+  return tags;
+}
+
+/**
+ * Remove non-existent tags from the annotation.
+ * 
+ * @param {object} annotation
+ */
+function removeNonExistentTags(annotation, tags) {
+  let newList = [];
+  for (let body of annotation.body) {
+    if (body.purpose === 'tagging' && tags.includes(body.value)) {
+      newList.push(body);
+    }
+    else if (body.purpose !== 'tagging') {
+      newList.push(body);
+    }
+  }
+  annotation.body = newList;
 }
 
 /**
@@ -313,7 +447,20 @@ function submitTag(inputBox, tag) {
 }
 
 /**
- * Attach default tags to the annotations. For visual purposes.
+ * Remove tag in the tagging list.
+ * 
+ * @param {string} tag
+ */
+function removeTag(tag) {
+  $('#page').find('.r6o-taglist').find('li').each(function() {
+    if ($(this).find('.r6o-label').first().text() == tag) {
+      $(this).find('.r6o-delete-wrapper').first().click();
+    }
+  });
+}
+
+/**
+ * Attach default tags to the annotations.
  * 
  * @param {object} defaultTags 
  */
@@ -333,6 +480,93 @@ function attachDefaultTags(defaultTags) {
       return submitTag(tagEntry, defaultTags[i]);
     });
   }
+}
+
+/**
+ * Attach the tag selector to the annotations.
+ * 
+ * @param {array} tags
+ */
+function attachTagSelector(tags) {
+  let button = $('<button class="r6o-tag-button r6o-btn">Select Tag to Add</button>');
+  let selector = $('<div class="r6o-tag-selector"></div>');
+  let search = $('<input type="text" placeholder="Search tag..." class="r6o-tag-search">');
+  search.on('input', function() {
+    let value = $(this).val().toLowerCase();
+    selector.find('.r6o-tag-option').each(function() {
+      let text = $(this).find('div').text().toLowerCase();
+      if (text.includes(value)) {
+        $(this).show();
+      }
+      else {
+        $(this).hide();
+      }
+    });
+  });
+  selector.append(search);
+  let tagList = $('<div class="r6o-tag-lister"></div>');
+  let currentTag = fetchCurrentTags();
+  let tagEntry = $('#page').find('.r6o-autocomplete').find('input').first();
+  $.each(tags, function(index, value) {
+    let option = $(`<label class="r6o-tag-option">
+    <div>${value}</div>
+    </label>`);
+    let addOption = $('<button class="r6o-tag-add r6o-btn">Add</button>');
+    let removeOption = $('<button class="r6o-tag-remove r6o-btn">Remove</button>');
+    removeOption.on('click', function(event) {
+      event.stopPropagation();
+      removeTag(value);
+      removeOption.hide();
+      addOption.show();
+    });
+    addOption.on('click', function(event) {
+      event.stopPropagation();
+      submitTag(tagEntry, value);
+      addOption.hide();
+      removeOption.show();
+    });
+    option.append(addOption);
+    if (currentTag.includes(value)) {
+      addOption.hide();
+    }
+    option.append(removeOption);
+    removeOption.hide();
+    if (currentTag.includes(value)) {
+      removeOption.show();
+    }
+    tagList.append(option);
+
+    option.on('click', function(event) {
+      event.preventDefault();
+      if (addOption.is(':visible')) {
+        submitTag(tagEntry, value);
+        addOption.hide();
+        removeOption.show();
+      } else if (removeOption.is(':visible')) {
+        removeTag(value);
+        removeOption.hide();
+        addOption.show();
+      }
+    });
+  });
+
+  selector.append(tagList);
+  button.on('click', function(event) {
+    event.stopPropagation();
+    selector.toggle();
+  });
+
+  selector.on('click', function(event) {
+    event.stopPropagation();
+  });
+
+  $(document).on('click', function(event) {
+    if (!$(event.target).hasClass('r6o-delete-wrapper')) {
+      selector.hide();
+    }
+  });
+
+  $('#page').find('.r6o-autocomplete div').first().append(button).append(selector);
 }
 
 /**
@@ -370,6 +604,13 @@ function clearSelected() {
 }
 
 /**
+ * Hide the text input for tags.
+ */
+function hideTagInput() {
+  $('#page').find('.r6o-autocomplete div').find('input').hide();
+}
+
+/**
  * Initialize Annotorious for the particular jQuery object.
  * 
  * @param {object} imgObj 
@@ -380,6 +621,9 @@ function initAnnotorious(imgObj, settings) {
   let perms = settings.permissions;
   let userData = settings.userData;
   let defaultTags = settings.tagOptions.defaultTags;
+  let tagSelector = settings.tagOptions.selector;
+  let tagTextEntry = settings.tagOptions.textInput;
+  let createTag = settings.tagOptions.createNewTag;
   let target = settings.current_target;
   let imgAnnotation = Annotorious.init({
     image: imgObj[0],
@@ -402,7 +646,15 @@ function initAnnotorious(imgObj, settings) {
   imageAnnotations[imgAnnotation.target].push(imgAnnotation);
 
   imgAnnotation.on('selectAnnotation', function(annotation) {
+    clearSelectedForImage(annotation.id);
     setTimeout(() => updateMenuByPermissions(settings, annotation), 3);
+    if (!tagTextEntry) {
+      setTimeout(() => hideTagInput(), 3);
+    }
+    if (tagSelector) {
+      setTimeout(() => attachTagSelector(tagList), 3);
+    }
+    setTimeout(() => attachTagList(settings.tagOptions), 3);
   });
 
   imgAnnotation.on('createAnnotation', function(annotation) {
@@ -415,6 +667,9 @@ function initAnnotorious(imgObj, settings) {
     annotation.target_element = target;
     removeDuplicateTags(annotation);
     annotation.node_id = settings.nodeId;
+    if (!createTag) {
+      removeNonExistentTags(annotation, tagList);
+    }
     annotation.type = 'Image';
     createAnnotation(annotation);
   });
@@ -434,6 +689,10 @@ function initAnnotorious(imgObj, settings) {
     }
     if (JSON.stringify(annotation) !== JSON.stringify(previous)) {
       removeDuplicateTags(annotation);
+      if (!createTag) {
+        removeNonExistentTags(annotation, tagList);
+      }
+      annotation.type = 'Image';
       updateAnnotation(annotation);
     }
   });
@@ -456,6 +715,26 @@ function initAnnotorious(imgObj, settings) {
     }
     deleteAnnotation(annotation);
   });
+}
+
+/**
+ * Clear all selected annotations but for image annotation selects. Treat each as cancel button click.
+ * 
+ * @param {string} annotationId
+ */
+function clearSelectedForImage(annotationId) {
+  $('#page').find('.r6o-editor').each(
+    function() {
+      let annotationEle = $(this).parent().parent().find(`.a9s-annotation[data-id="${annotationId}"]`);
+      if (annotationEle.length <= 0) {
+        $(this).find('.r6o-footer').find('.close-annotation, .cancel-annotation').each(
+          function() {
+            $(this).click();
+          }
+        );
+      }
+    }
+  );
 }
 
 /**
@@ -516,6 +795,7 @@ function getAnnotations(settings) {
         let annotation = AnnotationConverter.convertDataToW3C(content);
         switch (annotation.type) {
           case 'Text':
+            annotation.type = 'Annotation';
             if (textAnnotations[annotation.target_element]) {
               for (let annotationInstance of textAnnotations[annotation.target_element]) {
                 addAnnotation(annotationInstance, annotation);
@@ -523,6 +803,7 @@ function getAnnotations(settings) {
             }
             break;
           case 'Image':
+            annotation.type = 'Annotation';
             if (imageAnnotations[annotation.target_element]) {
               for (let annotationInstance of imageAnnotations[annotation.target_element]) {
                 if (annotationInstance.targetSrc === annotation.target.source) {

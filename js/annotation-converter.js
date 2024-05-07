@@ -64,6 +64,7 @@ var AnnotationConverter = (function() {
         annotation['style'] = data['style'];
         break;
       case 'Image':
+        annotation['type'] = 'Annotation';
         annotation['target'].selector = {
           conformsTo: "http://www.w3.org/TR/media-frags/",
           type: 'FragmentSelector',
