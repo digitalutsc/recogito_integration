@@ -22,6 +22,13 @@ The config is located in `/admin/config/development/recogito_integration`. To al
 - When a field is annotatable, you will be able to see a blue background behind the fields that are annotatable
 - Image annotations behave the same as text annotations. Annotation on the image is allowed if the image itself is within the field that is configured to be annotatable
 - Image annotations is simple box drawings on the region of the image you wish to have the annotation be displayed
+##### Tag Inputs
+Currently, this module only supports two forms of tag inputs (this could be decided in the config):
+- Input via existing tag selection
+  - This selection input supports selecting any tags that already exist within the selected vocabulary (does not support non-existent tag creation)
+- Input via text
+  - This text input supports tag creation (if enabled in settings) and basic tagging. Inputting any part of an existing tag will prompt an autocomplete for that specific tag.
+Note: Tag creation will only occur if configured in the configuration form, otherwise, new tags added during the annotation process are discarded.
 
 
 ### Tag Profiling

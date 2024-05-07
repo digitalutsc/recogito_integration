@@ -168,7 +168,6 @@ function initRecogito(domObj, settings) {
       txtAnnotation.removeAnnotation(annotation);
       return;
     }
-    appendDefaultTags(annotation, defaultTags);
     annotation.target_element = target;
     removeDuplicateTags(annotation);
     annotation.node_id = settings.nodeId;
@@ -261,13 +260,15 @@ function attachTagsEvent(domObj, tagOptions) {
 
 /**
  * Attach the tag list of the editor to remove duplicates or monitor list for tag selector.
+ * 
+ * @param {object} tagOptions
  */
 function attachTagList(tagOptions) {
   let tagObject = $('#page').find('.r6o-tag').first();
   let tagList = tagOptions.tagList;
   let createTag = tagOptions.createNewTag;
   let selector = tagOptions.selector;
-  let selectorList = $('#page').find('.r6o-tag-lister').first();
+  let listOptions = $('#page').find('.r6o-tag-lister').first().find('.r6o-tag-option');
   let observer = new MutationObserver(function(mutations) {
     mutations.forEach(function(mutation) {
       if (mutation.type === 'childList') {
@@ -284,7 +285,7 @@ function attachTagList(tagOptions) {
               node.remove();
             }
             if (selector) {
-              let option = selectorList.find('.r6o-tag-option').find(`div:contains('${tagContent}')`).first().parent();
+              let option = listOptions.find(`div:contains('${tagContent}')`).first().parent();
               option.find('.r6o-tag-add').hide();
               option.find('.r6o-tag-remove').show();
             }
@@ -300,7 +301,7 @@ function attachTagList(tagOptions) {
               if (!tagContent) {
                 return;
               }
-              let option = selectorList.find('.r6o-tag-option').find(`div:contains('${tagContent}')`).first().parent();
+              let option = listOptions.find(`div:contains('${tagContent}')`).first().parent();
               option.find('.r6o-tag-add').show();
               option.find('.r6o-tag-remove').hide();
             }
@@ -308,7 +309,7 @@ function attachTagList(tagOptions) {
               let tag = node.querySelector('li span.r6o-label');
               if (tag) {
                 let tagContent = tag.textContent;
-                let option = selectorList.find('.r6o-tag-option').find(`div:contains('${tagContent}')`).first().parent();
+                let option = listOptions.find(`div:contains('${tagContent}')`).first().parent();
                 option.find('.r6o-tag-add').show();
                 option.find('.r6o-tag-remove').hide();
               }
@@ -323,32 +324,32 @@ function attachTagList(tagOptions) {
 
 /**
  * Check if the tag is in the current list of tags from the tag list.
+ * 
+ * @param {string} tag
+ * 
+ * @returns {boolean}
  */
 function isInCurrentTags(tag) {
   let found = false;
-  $('#page').find('.r6o-taglist').find('li:not(:last)').each(
-    function() {
-      if ($(this).find('.r6o-label').first().text() == tag) {
-        found = true;
-        return;
-      }
+  $('#page').find('.r6o-taglist').find('li:not(:last)').each(function() {
+    if ($(this).find('.r6o-label').first().text() == tag) {
+      found = true;
+      return;
     }
-  );
+  });
   return found;
 }
 
 /**
  * Fetch the current list of tags from the tag list
  * 
- * @returns {array} tags
+ * @returns {array}
  */
 function fetchCurrentTags() {
   let tags = [];
-  $('#page').find('.r6o-taglist').find('li').each(
-    function() {
-      tags.push($(this).find('.r6o-label').first().text());
-    }
-  );
+  $('#page').find('.r6o-taglist').find('li').each(function() {
+    tags.push($(this).find('.r6o-label').first().text());
+  });
   return tags;
 }
 
@@ -398,18 +399,14 @@ function readOnlyText() {
   editor.find('.r6o-btn.delete-annotation').remove();
   editor.find('.r6o-autocomplete').remove();
   editor.find('.r6o-widget.comment.editable').remove();
-  editor.find('.r6o-taglist li').each(
-    function() {
-      $(this).replaceWith($(this).clone());
-    }
-  );
+  editor.find('.r6o-taglist li').each(function() {
+    $(this).replaceWith($(this).clone());
+  });
   editor.find('.r6o-icon.r6o-arrow-down').remove();
   editor.find('.r6o-btn.ok-annotation').remove();
-  editor.find('.cancel-annotation').each(
-    function() {
-      $(this).attr('class', 'r6o-btn close-annotation');
-    }
-  );
+  editor.find('.cancel-annotation').each(function() {
+    $(this).attr('class', 'r6o-btn close-annotation');
+  });
 }
 
 /**
@@ -508,9 +505,7 @@ function attachTagSelector(tags) {
   let currentTag = fetchCurrentTags();
   let tagEntry = $('#page').find('.r6o-autocomplete').find('input').first();
   $.each(tags, function(index, value) {
-    let option = $(`<label class="r6o-tag-option">
-    <div>${value}</div>
-    </label>`);
+    let option = $(`<label class="r6o-tag-option"><div>${value}</div></label>`);
     let addOption = $('<button class="r6o-tag-add r6o-btn">Add</button>');
     let removeOption = $('<button class="r6o-tag-remove r6o-btn">Remove</button>');
     option.append(addOption);
@@ -558,37 +553,12 @@ function attachTagSelector(tags) {
 }
 
 /**
- * Append default tags to the annotation.
- * 
- * @param {object} annotation
- * @param {object} defaultTags
- */
-function appendDefaultTags(annotation, defaultTags) {
-  if (defaultTags.length <= 0) {
-    return;
-  }
-  let originalContent = annotation.body[0];
-  for (let i in defaultTags) {
-    annotation.body.push({
-      created: originalContent.created,
-      creator: originalContent.creator,
-      modified: originalContent.modified,
-      purpose: 'tagging',
-      type: originalContent.type,
-      value: defaultTags[i]
-    });
-  }
-}
-
-/**
  * Clear all selected annotations. Treat each as cancel button click.
  */
 function clearSelected() {
-  $('#page').find('.r6o-footer').find('.close-annotation, .cancel-annotation').each(
-    function() {
-      $(this).click();
-    }
-  );
+  $('#page').find('.r6o-footer').find('.close-annotation, .cancel-annotation').each(function() {
+    $(this).click();
+  });
 }
 
 /**
@@ -651,7 +621,6 @@ function initAnnotorious(imgObj, settings) {
       imgAnnotation.removeAnnotation(annotation);
       return;
     }
-    appendDefaultTags(annotation, defaultTags);
     annotation.target_element = target;
     removeDuplicateTags(annotation);
     annotation.node_id = settings.nodeId;
@@ -711,18 +680,14 @@ function initAnnotorious(imgObj, settings) {
  * @param {string} annotationId
  */
 function clearSelectedForImage(annotationId) {
-  $('#page').find('.r6o-editor').each(
-    function() {
-      let annotationEle = $(this).parent().parent().find(`.a9s-annotation[data-id="${annotationId}"]`);
-      if (annotationEle.length <= 0) {
-        $(this).find('.r6o-footer').find('.close-annotation, .cancel-annotation').each(
-          function() {
-            $(this).click();
-          }
-        );
-      }
+  $('#page').find('.r6o-editor').each(function() {
+    let annotationEle = $(this).parent().parent().find(`.a9s-annotation[data-id="${annotationId}"]`);
+    if (annotationEle.length <= 0) {
+      $(this).find('.r6o-footer').find('.close-annotation, .cancel-annotation').each(function() {
+        $(this).click();
+      });
     }
-  );
+  });
 }
 
 /**
