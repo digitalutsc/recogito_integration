@@ -35,6 +35,9 @@
   height: 160px;
   max-height: 160px;
   overflow-y: auto;
+  -webkit-user-select: none; /* Safari */
+  -ms-user-select: none; /* IE 10 and IE 11 */
+  user-select: none; /* Standard syntax */
 }
 
 .r6o-tag-option {

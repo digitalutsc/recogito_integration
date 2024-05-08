@@ -371,6 +371,13 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       '#default_value' => $config->get('recogito_integration.tag_selector') ?? 0,
     ];
 
+    $form['tag_set']['preview_tag_selector'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Preview tag styling in tag selector.'),
+      '#description' => 'If enabled, the tag selector will display the tag styling in the dropdown.',
+      '#default_value' => $config->get('recogito_integration.preview_tag_selector') ?? 0,
+    ];
+
     $form['tag_set']['term_settings_container'] = [
       '#type' => 'container',
       '#attributes' => ['id' => 'term_settings_container'],
@@ -448,6 +455,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
     $config->set('recogito_integration.vocabulary_name', $form_state->getValue('vocabulary_name'));
     $config->set('recogito_integration.tag_text_input', $form_state->getValue('tag_text_input'));
     $config->set('recogito_integration.tag_selector', $form_state->getValue('tag_selector'));
+    $config->set('recogito_integration.preview_tag_selector', $form_state->getValue('preview_tag_selector'));
     $config->set('recogito_integration.default_tag', $form_state->getValue('default_tag') ?? []);
     $config->set('recogito_integration.create_nonexistent_tag', $form_state->getValue('create_nonexistent_tag') ?? 1);
     $config->save();

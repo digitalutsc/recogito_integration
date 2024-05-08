@@ -117,7 +117,7 @@ function initComponents(domObj, settings) {
 function initRecogito(domObj, settings) {
   let userData = settings.userData;
   let tagList = settings.tagOptions.tagList;
-  let defaultTags = settings.tagOptions.defaultTags;
+  let tagStyleList = settings.tagOptions.tagStyleList;
   let tagSelector = settings.tagOptions.selector;
   let tagTextEntry = settings.tagOptions.textInput;
   let createTag = settings.tagOptions.createNewTag;
@@ -157,7 +157,7 @@ function initRecogito(domObj, settings) {
       setTimeout(() => hideTagInput(), 3);
     }
     if (tagSelector) {
-      setTimeout(() => attachTagSelector(tagList), 3);
+      setTimeout(() => attachTagSelector(tagStyleList), 3);
     }
     setTimeout(() => attachTagList(settings.tagOptions), 3);
   });
@@ -169,12 +169,12 @@ function initRecogito(domObj, settings) {
       return;
     }
     annotation.target_element = target;
-    removeDuplicateTags(annotation);
     annotation.node_id = settings.nodeId;
-    if (!createTag) {
-      removeNonExistentTags(annotation, tagList);
-    }
     annotation.type = 'Text';
+    if (annotation.body.length <= 0) {
+      txtAnnotation.removeAnnotation(annotation);
+      return;
+    }
     createAnnotation(annotation);
   });
 
@@ -192,10 +192,6 @@ function initRecogito(domObj, settings) {
       return;
     }
     if (JSON.stringify(annotation) !== JSON.stringify(previous)) {
-      removeDuplicateTags(annotation);
-      if (!createTag) {
-        removeNonExistentTags(annotation, tagList);
-      }
       annotation.type = 'Text';
       updateAnnotation(annotation);
       return;
@@ -247,7 +243,7 @@ function attachTagsEvent(domObj, tagOptions) {
               setTimeout(() => hideTagInput(), 3);
             }
             if (tagOptions.selector) {
-              setTimeout(() => attachTagSelector(tagOptions.tagList), 3);
+              setTimeout(() => attachTagSelector(tagOptions.tagStyleList), 3);
             }
             setTimeout(() => attachTagList(tagOptions), 3);
           }
@@ -256,6 +252,28 @@ function attachTagsEvent(domObj, tagOptions) {
     }
   });
   observer.observe(domObj[0], { childList: true, subtree: true });
+}
+
+/**
+ * Show/Hide the buttons in the tag list for a specific tag.
+ * 
+ * @param {object} listOptions
+ * @param {string} tag
+ * @param {boolean} adding
+ */
+function selectorListToggle(listOptions, tag, adding) {
+  let option = listOptions.find(`div[selector-tag='${tag}']`);
+  if (option.length <= 0) {
+    return;
+  }
+  let parent = option.first().parent();
+  if (adding) {
+    parent.find('.r6o-tag-add').hide();
+    parent.find('.r6o-tag-remove').show();
+    return;
+  }
+  parent.find('.r6o-tag-add').show();
+  parent.find('.r6o-tag-remove').hide();
 }
 
 /**
@@ -273,22 +291,27 @@ function attachTagList(tagOptions) {
     mutations.forEach(function(mutation) {
       if (mutation.type === 'childList') {
         mutation.addedNodes.forEach(function(node) {
-          if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'LI') {
-            let tagContent = node.querySelector('span.r6o-label')?.textContent;
-            if (!tagContent) {
-              return;
-            }
-            if (!createTag && !tagList.includes(tagContent)) {
-              node.remove();
-            }
-            if (isInCurrentTags(tagContent)) {
-              node.remove();
-            }
-            if (selector) {
-              let option = listOptions.find(`div[selector-tag='${tagContent}']`).first().parent();
-              option.find('.r6o-tag-add').hide();
-              option.find('.r6o-tag-remove').show();
-            }
+          if (node.nodeType !== Node.ELEMENT_NODE) {
+            return;
+          }
+          let tagContent = null;
+          if (node.tagName === 'LI') {
+            tagContent = node.querySelector('span.r6o-label')?.textContent;
+          } 
+          else if (node.tagName === 'UL') {
+            tagContent = node.querySelector('li span.r6o-label')?.textContent;
+          }
+          if (!tagContent) {
+            return;
+          }
+          if (!createTag && !tagList.includes(tagContent)) {
+            removeTag(tagContent);
+          }
+          if (isInCurrentTags(tagContent, false)) {
+            removeTag(tagContent);
+          }
+          if (selector) {
+            selectorListToggle(listOptions, tagContent, true);
           }
         });
         if (selector) {
@@ -296,24 +319,17 @@ function attachTagList(tagOptions) {
             if (node.nodeType !== Node.ELEMENT_NODE) {
               return;
             }
+            let tagContent = null;
             if (node.tagName === 'LI') {
-              let tagContent = node.querySelector('span.r6o-label')?.textContent;
-              if (!tagContent) {
-                return;
-              }
-              let option = listOptions.find(`div[selector-tag='${tagContent}']`).first().parent();
-              option.find('.r6o-tag-add').show();
-              option.find('.r6o-tag-remove').hide();
-            }
+              tagContent = node.querySelector('span.r6o-label')?.textContent;
+            } 
             else if (node.tagName === 'UL') {
-              let tag = node.querySelector('li span.r6o-label');
-              if (tag) {
-                let tagContent = tag.textContent;
-                let option = listOptions.find(`div[selector-tag='${tagContent}']`).first().parent();
-                option.find('.r6o-tag-add').show();
-                option.find('.r6o-tag-remove').hide();
-              }
+              tagContent = node.querySelector('li span.r6o-label')?.textContent;
             }
+            if (!tagContent || isInCurrentTags(tagContent, true)) {
+              return;
+            }
+            selectorListToggle(listOptions, tagContent, false);
           });
         }
       }
@@ -326,12 +342,17 @@ function attachTagList(tagOptions) {
  * Check if the tag is in the current list of tags from the tag list.
  * 
  * @param {string} tag
+ * @param {boolean} last
  * 
  * @returns {boolean}
  */
-function isInCurrentTags(tag) {
+function isInCurrentTags(tag, last) {
   let found = false;
-  $('#page').find('.r6o-taglist').find('li:not(:last)').each(function() {
+  let queryString = 'li';
+  if (!last) {
+    queryString += ':not(:last)';
+  }
+  $('#page').find('.r6o-taglist').find(queryString).each(function() {
     if ($(this).find('.r6o-label').first().text() == tag) {
       found = true;
       return;
@@ -351,44 +372,6 @@ function fetchCurrentTags() {
     tags.push($(this).find('.r6o-label').first().text());
   });
   return tags;
-}
-
-/**
- * Remove non-existent tags from the annotation.
- * 
- * @param {object} annotation
- */
-function removeNonExistentTags(annotation, tags) {
-  let newList = [];
-  for (let body of annotation.body) {
-    if (body.purpose === 'tagging' && tags.includes(body.value)) {
-      newList.push(body);
-    }
-    else if (body.purpose !== 'tagging') {
-      newList.push(body);
-    }
-  }
-  annotation.body = newList;
-}
-
-/**
- * Remove duplicate tags from the annotation.
- * 
- * @param {object} annotation 
- */
-function removeDuplicateTags(annotation) {
-  let unique = [];
-  let map = new Map();
-  for (let body of annotation.body) {
-    if (body.purpose === 'tagging' && !map.has(body.value)) {
-      map.set(body.value, true);
-      unique.push(body);
-    }
-    else if (body.purpose !== 'tagging'){
-      unique.push(body);
-    }
-  }
-  annotation.body = unique;
 }
 
 /**
@@ -504,17 +487,29 @@ function attachTagSelector(tags) {
   let tagList = $('<div class="r6o-tag-lister"></div>');
   let currentTag = fetchCurrentTags();
   let tagEntry = $('#page').find('.r6o-autocomplete').find('input').first();
+  if (tags.length <= 0) {
+    tagList.text('No tags available.');
+  }
   $.each(tags, function(index, value) {
-    let option = $(`<label class="r6o-tag-option"><div selector-tag="${value}">${value}</div></label>`);
+    let option = $(`<label class="r6o-tag-option"></label>`);
+    let label = $(`<div selector-tag="${value['name']}">${value['name']}</div>`);
+    if (value['hasStyle']) {
+      label.css({
+        'background-color': hexToRgbA(value['style']['background_color'], value['style']['background_transparency']),
+        'color': value['style']['text_color'],
+        'border-bottom': `${value['style']['underline_stroke']}px ${value['style']['underline_style']} ${hexToRgbA(value['style']['underline_color'])}`
+      });
+    }
+    option.append(label);
     let addOption = $('<button class="r6o-tag-add r6o-btn">Add</button>');
     let removeOption = $('<button class="r6o-tag-remove r6o-btn">Remove</button>');
     option.append(addOption);
-    if (currentTag.includes(value)) {
+    if (currentTag.includes(value['name'])) {
       addOption.hide();
     }
     option.append(removeOption);
     removeOption.hide();
-    if (currentTag.includes(value)) {
+    if (currentTag.includes(value['name'])) {
       removeOption.show();
     }
     tagList.append(option);
@@ -522,13 +517,13 @@ function attachTagSelector(tags) {
     option.on('click', function(event) {
       event.preventDefault();
       if (addOption.is(':visible')) {
-        submitTag(tagEntry, value);
         addOption.hide();
         removeOption.show();
+        submitTag(tagEntry, value['name']);
       } else if (removeOption.is(':visible')) {
-        removeTag(value);
         removeOption.hide();
         addOption.show();
+        removeTag(value['name']);
       }
     });
   });
@@ -576,9 +571,9 @@ function hideTagInput() {
  */
 function initAnnotorious(imgObj, settings) {
   let tagList = settings.tagOptions.tagList;
+  let tagStyleList = settings.tagOptions.tagStyleList;
   let perms = settings.permissions;
   let userData = settings.userData;
-  let defaultTags = settings.tagOptions.defaultTags;
   let tagSelector = settings.tagOptions.selector;
   let tagTextEntry = settings.tagOptions.textInput;
   let createTag = settings.tagOptions.createNewTag;
@@ -610,7 +605,7 @@ function initAnnotorious(imgObj, settings) {
       setTimeout(() => hideTagInput(), 3);
     }
     if (tagSelector) {
-      setTimeout(() => attachTagSelector(tagList), 3);
+      setTimeout(() => attachTagSelector(tagStyleList), 3);
     }
     setTimeout(() => attachTagList(settings.tagOptions), 3);
   });
@@ -622,12 +617,12 @@ function initAnnotorious(imgObj, settings) {
       return;
     }
     annotation.target_element = target;
-    removeDuplicateTags(annotation);
     annotation.node_id = settings.nodeId;
-    if (!createTag) {
-      removeNonExistentTags(annotation, tagList);
-    }
     annotation.type = 'Image';
+    if (annotation.body.length <= 0) {
+      imgAnnotation.removeAnnotation(annotation);
+      return;
+    }
     createAnnotation(annotation);
   });
 
@@ -645,10 +640,6 @@ function initAnnotorious(imgObj, settings) {
       return;
     }
     if (JSON.stringify(annotation) !== JSON.stringify(previous)) {
-      removeDuplicateTags(annotation);
-      if (!createTag) {
-        removeNonExistentTags(annotation, tagList);
-      }
       annotation.type = 'Image';
       updateAnnotation(annotation);
     }

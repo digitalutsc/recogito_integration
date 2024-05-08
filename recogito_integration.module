@@ -64,10 +64,44 @@ function recogito_integration_page_attachments(array &$attachments) {
     $vocab = $config->get('recogito_integration.vocabulary_name');
     $termList = [];
     if ($vocab) {
+      $field_definitions = \Drupal::service('entity_field.manager')->getFieldDefinitions('taxonomy_term', $vocab);
+      $style_field = '';
+      if ($config->get('recogito_integration.preview_tag_selector')) {
+        foreach ($field_definitions as $field_name => $field_definition) {
+          if ($field_definition->getType() === 'annotation_profile') {
+            $style_field = $field_name;
+            break;
+          }
+        }
+      }
       $terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vocab);
-      $termList = array_map(function ($term) {
-        return $term->name;
-      }, $terms);
+      $term_storage = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
+      $termList = [];
+      $termStyleList = [];
+      foreach ($terms as $term) {
+        $termList[] = $term->name;
+        $result = ['name' => $term->name, 'hasStyle' => 0];
+        $term = $term_storage->load($term->tid);
+        if (!$style_field) {
+          $termStyleList[] = $result;
+          continue;
+        }
+        $style = $term->get($style_field)->getValue();
+        if (empty($style) || !$style[0]['styling_choice']) {
+          $termStyleList[] = $result;
+          continue;
+        }
+        $result['hasStyle'] = 1;
+        $result['style'] = [
+          'text_color' => $style[0]['text_color'],
+          'background_color' => $style[0]['background_color'],
+          'underline_style' => $style[0]['underline_style'],
+          'underline_stroke' => $style[0]['underline_stroke'],
+          'underline_color' => $style[0]['underline_color'],
+          'background_transparency' => $style[0]['background_transparency'],
+        ];
+        $termStyleList[] = $result;
+      }
     }
     $defaultTagIds = $config->get('recogito_integration.default_tag') ?? [];
     $defaultTags = [];
@@ -81,6 +115,7 @@ function recogito_integration_page_attachments(array &$attachments) {
     $attached['tagOptions'] = [
       'defaultTags' => $defaultTags,
       'tagList' => $termList,
+      'tagStyleList' => $termStyleList,
       'selector' => $config->get('recogito_integration.tag_selector') ?? 0,
       'textInput' => $config->get('recogito_integration.tag_text_input') ?? 1,
       'createNewTag' => $config->get('recogito_integration.create_nonexistent_tag') ?? 1,

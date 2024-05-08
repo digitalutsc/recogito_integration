@@ -98,13 +98,15 @@ class AnnotationStorage extends ControllerBase {
   /**
    * Constructs the style for an annotation based on its tags.
    *
+   * @param string $style_field
+   *   The field name for the annotation profile.
    * @param array $tags
    *   The tags associated with the annotation.
    *
    * @return array
    *   The style for the annotation.
    */
-  public function constructStyle(array $tags) {
+  public function constructStyle(string $style_field, array $tags) {
     $config = $this->configFactory->get('recogito_integration.settings');
     $style = [
       'text_color' => $config->get('recogito_integration.text_color') ?? '#000000',
@@ -114,46 +116,22 @@ class AnnotationStorage extends ControllerBase {
       'underline_stroke' => $config->get('recogito_integration.underline_stroke') ?? '0',
       'background_transparency' => $config->get('recogito_integration.background_transparency') ?? '0',
     ];
-    if (!$tags) {
+    if (!$tags || empty($style_field)) {
       return $style;
     }
-    $style_field = [];
     $min = reset($tags);
     foreach ($tags as $tag) {
-      $vocabulary = $tag->bundle();
-      if (!isset($style_field[$vocabulary])) {
-        $field_definitions = $this->entityFieldManager->getFieldDefinitions('taxonomy_term', $vocabulary);
-        foreach ($field_definitions as $field_name => $field_definition) {
-          if ($field_definition->getType() === 'annotation_profile') {
-            $style_field[$vocabulary] = $field_name;
-            break;
-          }
-        }
-        if (!isset($style_field[$vocabulary])) {
-          $style_field[$vocabulary] = '';
-        }
-      }
-      if (empty($style_field[$vocabulary])) {
-        continue;
-      }
-      $min_field = $style_field[$min->bundle()];
-      $tag_field = $style_field[$vocabulary];
-
-      $min_style = $min->get($min_field)->getValue();
-      $tag_style = $tag->get($tag_field)->getValue();
-      if (empty($min_style) || isset($tag_style) && $min_style[0]['styling_choice'] == '0') {
+      $min_style = $min->get($style_field)->getValue();
+      $tag_style = $tag->get($style_field)->getValue();
+      if (empty($min_style) || isset($tag_style) && !$min_style[0]['styling_choice']) {
         $min = $tag;
       }
-      elseif (!empty($tag_style) && $tag_style[0]['styling_choice'] == '1' && $tag_style[0]['styling_weight'] < $min_style[0]['styling_weight']) {
+      elseif (!empty($tag_style) && $tag_style[0]['styling_choice'] && $tag_style[0]['styling_weight'] < $min_style[0]['styling_weight']) {
         $min = $tag;
       }
     }
-    $min_field = $style_field[$min->bundle()];
-    if (empty($min_field)) {
-      return $style;
-    }
-    $min_style = $min->get($min_field)->getValue();
-    if (!empty($min_style) && $min_style[0]['styling_choice'] == '1') {
+    $min_style = $min->get($style_field)->getValue();
+    if (!empty($min_style) && $min_style[0]['styling_choice']) {
       $style = [
         'text_color' => $min_style[0]['text_color'],
         'background_color' => $min_style[0]['background_color'],
@@ -187,6 +165,15 @@ class AnnotationStorage extends ControllerBase {
     $annotations = self::getAnnotationForNode($nid);
     if (!$annotations) {
       return new JsonResponse(json_encode([]), 200);
+    }
+    $config = $this->configFactory->get('recogito_integration.settings');
+    $field_definitions = $this->entityFieldManager->getFieldDefinitions('taxonomy_term', $config->get('recogito_integration.vocabulary_name'));
+    $style_field = '';
+    foreach ($field_definitions as $field_name => $field_definition) {
+      if ($field_definition->getType() === 'annotation_profile') {
+        $style_field = $field_name;
+        break;
+      }
     }
     $annotationData = [];
     foreach ($annotations as $annotation) {
@@ -224,7 +211,7 @@ class AnnotationStorage extends ControllerBase {
         }
         $textualbodies[] = $bodyContent;
       }
-      $style = self::constructStyle($tags);
+      $style = self::constructStyle($style_field, $tags);
       $data = [
         'id' => $annotation->get('field_annotation_id')->getString(),
         'textualbodies' => $textualbodies,
