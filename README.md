@@ -10,26 +10,31 @@
  - Annotate non-field elements on the page by adding its HTML attributes
 
 ### Configuration
-The config is located in `/admin/config/development/recogito_integration`. To allow any form of annotation, please scroll down and select a vocabulary (preferably a new vocabulary) to allow the module to function. The configuration is straightforward, if you like to have a content type to be annotatable, simply check the checkbox for that type and pick the fields to be annotatable.
-##### Custom Annotations
+The config is located in `/admin/config/development/recogito_integration`. To allow any form of annotation, please scroll down and select a vocabulary (preferably a new vocabulary) to allow the module to function. The configuration is straightforward, if you like to have a content type to be annotatable, simply check the checkbox for that type and pick the fields to allow annotations.
+#### Custom Annotations
 - Custom annotations can be achieved by enabling `Enable custom annotation on HTML elements` in the configuration
 - Enabling custom annotations will cause an input text box to appear
 - Simply enter the associated HTML query selector for the DOM element. To learn the syntax structure you can reference [here](https://developer.mozilla.org/en-US/docs/Learn/CSS/Building_blocks/Selectors)
 - One element per line for the module to pickup each element
-##### Annotations
+#### Annotations
 - Annotations will be enabled when you configurate which content type could be annotatable and which fields
 - Once these are set, go to the node you want to annotate that has the content type you configured and click the `Annotate` tab (its in the same area where `Edit` and `View` are)
-- When a field is annotatable, you will be able to see a blue background behind the fields that are annotatable
-- Image annotations behave the same as text annotations. Annotation on the image is allowed if the image itself is within the field that is configured to be annotatable
-- Image annotations is simple box drawings on the region of the image you wish to have the annotation be displayed
-##### Tag Inputs
+- When a field is annotatable, you will be able to see a blue background behind that field
+#### Tag Inputs
 Currently, this module only supports two forms of tag inputs (this could be decided in the config):
 - Input via existing tag selection
   - This selection input supports selecting any tags that already exist within the selected vocabulary (does not support non-existent tag creation)
 - Input via text
   - This text input supports tag creation (if enabled in settings) and basic tagging. Inputting any part of an existing tag will prompt an autocomplete for that specific tag.
 Note: Tag creation will only occur if configured in the configuration form, otherwise, new tags added during the annotation process are discarded.
-
+#### How to annotate text
+- Text that are annotatable will have a blue background behind
+- Simply use your mouse and select the portion of the text that you wish to annotate
+- Once selected, an annotation window will popup allowing you to enter any content regarding the text in the comment and add any related tags
+#### How to annotate image
+- Image that are annotatable will have a blue background behind
+- Simply drag your mouse as if you are drawing a rectangle over the region of the image you wish to annotate
+- Once selected, the region of the image should have a yellow box along with an annotation window popup allowing you to enter any content regarding the image in the comment and add any related tags
 
 ### Tag Profiling
 - Go to the Vocabulary that is set in the config for tags

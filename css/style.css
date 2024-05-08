@@ -13,6 +13,7 @@
 
 .r6o-widget.r6o-tag .r6o-taglist {
   overflow: auto;
+  max-height: 120px;
 }
 
 .r6o-tag-button {
@@ -51,7 +52,7 @@
 }
 
 .r6o-tag-option:hover {
-  background: #f5f5f5;
+  background-color: #eeebeb;
 }
 
 .r6o-tag-option:hover .r6o-btn {
@@ -59,8 +60,16 @@
   border-color:#4f92d7;
 }
 
+.r6o-tag-option div {
+  max-width: 75%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .r6o-tag-search {
   min-height: var(--sp2) !important;
+  height: var(--sp2) !important;
   border-bottom: 1px solid #e5e5e5 !important;
 }
 

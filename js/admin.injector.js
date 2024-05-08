@@ -285,7 +285,7 @@ function attachTagList(tagOptions) {
               node.remove();
             }
             if (selector) {
-              let option = listOptions.find(`div:contains('${tagContent}')`).first().parent();
+              let option = listOptions.find(`div[selector-tag='${tagContent}']`).first().parent();
               option.find('.r6o-tag-add').hide();
               option.find('.r6o-tag-remove').show();
             }
@@ -301,7 +301,7 @@ function attachTagList(tagOptions) {
               if (!tagContent) {
                 return;
               }
-              let option = listOptions.find(`div:contains('${tagContent}')`).first().parent();
+              let option = listOptions.find(`div[selector-tag='${tagContent}']`).first().parent();
               option.find('.r6o-tag-add').show();
               option.find('.r6o-tag-remove').hide();
             }
@@ -309,7 +309,7 @@ function attachTagList(tagOptions) {
               let tag = node.querySelector('li span.r6o-label');
               if (tag) {
                 let tagContent = tag.textContent;
-                let option = listOptions.find(`div:contains('${tagContent}')`).first().parent();
+                let option = listOptions.find(`div[selector-tag='${tagContent}']`).first().parent();
                 option.find('.r6o-tag-add').show();
                 option.find('.r6o-tag-remove').hide();
               }
@@ -505,7 +505,7 @@ function attachTagSelector(tags) {
   let currentTag = fetchCurrentTags();
   let tagEntry = $('#page').find('.r6o-autocomplete').find('input').first();
   $.each(tags, function(index, value) {
-    let option = $(`<label class="r6o-tag-option"><div>${value}</div></label>`);
+    let option = $(`<label class="r6o-tag-option"><div selector-tag="${value}">${value}</div></label>`);
     let addOption = $('<button class="r6o-tag-add r6o-btn">Add</button>');
     let removeOption = $('<button class="r6o-tag-remove r6o-btn">Remove</button>');
     option.append(addOption);
@@ -536,7 +536,7 @@ function attachTagSelector(tags) {
   selector.append(tagList);
   button.on('click', function(event) {
     event.stopPropagation();
-    selector.toggle();
+    selector.animate({height: 'toggle'});
   });
 
   selector.on('click', function(event) {
