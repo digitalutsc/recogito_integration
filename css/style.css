@@ -1,10 +1,18 @@
-.r6o-widget.r6o-tag{
+.r6o-editor {
+  display: block !important;
+}
+
+.r6o-widget.r6o-tag {
   display: flex !important;
   flex-direction: column;
 }
 
-.r6o-widget.r6o-tag .r6o-taglist li{
+.r6o-widget.r6o-tag .r6o-taglist li {
   float: left !important;
+}
+
+.r6o-widget:empty {
+  display: none !important;
 }
 
 .r6o-widget.r6o-tag:empty {
@@ -59,8 +67,8 @@
 }
 
 .r6o-tag-option:hover .r6o-btn {
-  background-color:#4f92d7;
-  border-color:#4f92d7;
+  background-color: #4f92d7;
+  border-color: #4f92d7;
 }
 
 .r6o-tag-option div {
@@ -76,22 +84,30 @@
   border-bottom: 1px solid #e5e5e5 !important;
 }
 
-.r6o-lastmodified-at{
+.media--view-mode-full .field--name-field-media-image .field__item div {
+  display: block !important;
+}
+.media--view-mode-full .field--name-field-media-image .field__item div img {
+  width: 100% !important;
+  height: auto !important;
+}
+
+.r6o-lastmodified-at {
   -webkit-touch-callout: none; /* iOS Safari */
   -webkit-user-select: none; /* Safari */
   -khtml-user-select: none; /* Konqueror HTML */
   -moz-user-select: none; /* Old versions of Firefox */
   -ms-user-select: none; /* Internet Explorer/Edge */
-  user-select: none /* Non-prefixed version, currently
+  user-select: none; /* Non-prefixed version, currently
                                   supported by Chrome, Edge, Opera and Firefox */
 }
 
-.r6o-lastmodified-by{
+.r6o-lastmodified-by {
   -webkit-touch-callout: none; /* iOS Safari */
   -webkit-user-select: none; /* Safari */
   -khtml-user-select: none; /* Konqueror HTML */
   -moz-user-select: none; /* Old versions of Firefox */
   -ms-user-select: none; /* Internet Explorer/Edge */
-  user-select: none /* Non-prefixed version, currently
+  user-select: none; /* Non-prefixed version, currently
                                   supported by Chrome, Edge, Opera and Firefox */
 }

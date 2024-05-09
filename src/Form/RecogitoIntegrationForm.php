@@ -2,14 +2,14 @@
 
 namespace Drupal\recogito_integration\Form;
 
+use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
+use Drupal\Core\Entity\EntityFieldManagerInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\taxonomy\Entity\Vocabulary;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Entity\EntityFieldManagerInterface;
-use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\field\Entity\FieldConfig;
+use Drupal\taxonomy\Entity\Vocabulary;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Form for Recogito Integration's config.
@@ -50,7 +50,8 @@ class RecogitoIntegrationForm extends ConfigFormBase {
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
     EntityFieldManagerInterface $entity_field_manager,
-    CacheTagsInvalidatorInterface $cache_tags_invalidator) {
+    CacheTagsInvalidatorInterface $cache_tags_invalidator,
+  ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->entityFieldManager = $entity_field_manager;
     $this->cacheTagsInvalidator = $cache_tags_invalidator;
@@ -60,7 +61,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
-    return new static(
+    return new self(
       $container->get('entity_type.manager'),
       $container->get('entity_field.manager'),
       $container->get('cache_tags.invalidator')
@@ -168,7 +169,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       ->getStorage('paragraph')
       ->loadByProperties([
         'type' => 'annotation_textualbody',
-        'field_annotation_purpose' => 'tagging'
+        'field_annotation_purpose' => 'tagging',
       ]);
     foreach ($textualbodies as $textualbody) {
       $tags = $textualbody->get('field_annotation_tag_reference')->referencedEntities();
@@ -206,7 +207,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       $contentSave = $annotatables[$ct] ?? [];
       $form['annotatables'][$ct . '_annotatable'] = [
         '#type' => 'checkbox',
-        '#title' => $this->t($label),
+        '#title' => $label,
         '#default_value' => $contentSave['enabled'] ?? 0,
         '#ajax' => [
           'callback' => '::contentTypesCallback',
@@ -251,7 +252,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       '#type' => 'textarea',
       '#title' => $this->t('List of specific HTML Element(s) to attach the Recogito JS library to:'),
       '#default_value' => $config->get('recogito_integration.custom_annotations_elements') ?? '',
-      '#description' => $this->t($custom_description),
+      '#description' => $custom_description,
       '#states' => [
         'visible' => [
           ':input[name="custom_annotations"]' => ['checked' => TRUE],
@@ -259,12 +260,10 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       ],
     ];
 
-    $style_description = 'Set the default styles for annotations. Annotations without tags and 
-    style tags will inherit this style.';
     $form['default_styles'] = [
       '#type' => 'fieldset',
       '#title' => $this->t('Default Styles for Annotations'),
-      '#description' => $this->t($style_description),
+      '#description' => $this->t('Set the default styles for annotations. Annotations without tags and style tags will inherit this style.'),
     ];
 
     $form['default_styles']['background_color'] = [
@@ -273,24 +272,20 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       '#default_value' => $config->get('recogito_integration.background_color'),
     ];
 
-    $background_transparency_description = 'Set the transparency of the annotation background color. 1 is 
-    fully opaque, 0 is fully transparent.';
     $form['default_styles']['background_transparency'] = [
       '#type' => 'number',
       '#min' => 0,
       '#max' => 1,
       '#step' => 0.01,
       '#title' => $this->t('Annotation Background Transparency'),
-      '#description' => $this->t($background_transparency_description),
+      '#description' => $this->t('Set the transparency of the annotation background color. 1 is fully opaque, 0 is fully transparent.'),
       '#default_value' => $config->get('recogito_integration.background_transparency') ?? 0,
     ];
 
-    $text_color_description = 'The color of the annotated text. If omitted, annotated text will be the 
-    same color as un-annotated text.';
     $form['default_styles']['text_color'] = [
       '#type' => 'color',
       '#title' => $this->t('Annotation Text Color'),
-      '#description' => $this->t($text_color_description),
+      '#description' => $this->t('The color of the annotated text. If omitted, annotated text will be the same color as un-annotated text.'),
       '#default_value' => $config->get('recogito_integration.text_color'),
     ];
 
@@ -334,15 +329,14 @@ class RecogitoIntegrationForm extends ConfigFormBase {
 
     $form['tag_set'] = [
       '#type' => 'fieldset',
-      '#title' => $this->t("Pick a vocabulary to serve for tagging."),
+      '#title' => $this->t('Pick a vocabulary to serve for tagging.'),
     ];
 
     $config_vocab = $config->get('recogito_integration.vocabulary_name');
     $lockedSelection = $this->hasTags($config_vocab ?? '');
     $tag_description = $lockedSelection ?
-      'Tag switching is disabled! Please delete existing annotation textualbody tags to switch vocabulary!' :
-      'Select the vocabulary for tagging.<br>
-      WARNING: Any non-existent tags entered during annotating will be created within this vocabulary as a taxonomy term!';
+      $this->t('Tag switching is disabled! Please delete existing annotation textualbody tags to switch vocabulary!') :
+      $this->t('Select the vocabulary for tagging.<br>WARNING: Any non-existent tags entered during annotating will be created within this vocabulary as a taxonomy term!');
     $form['tag_set']['vocabulary_name'] = [
       '#type' => 'select',
       '#title' => $this->t('Annotation Vocabulary Name'),
@@ -351,30 +345,30 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       '#disabled' => $lockedSelection,
       '#ajax' => [
         'callback' => '::vocabularyCallback',
-        'wrapper' => 'term_settings_container'
+        'wrapper' => 'term_settings_container',
       ],
-      '#description' => $this->t($tag_description),
+      '#description' => $tag_description,
       '#required' => TRUE,
     ];
 
     $form['tag_set']['tag_text_input'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Enable tag text input for new tags.'),
-      '#description' => 'If enabled, users can input new tags during annotation creation given that the tag creation option is enabled.',
+      '#description' => $this->t('If enabled, users can input new tags during annotation creation given that the tag creation option is enabled.'),
       '#default_value' => $config->get('recogito_integration.tag_text_input') ?? 1,
     ];
 
     $form['tag_set']['tag_selector'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Enable tag selection for existing tags.'),
-      '#description' => 'If enabled, users can select existing tags during annotation creation. This input does not support tag creation.',
+      '#description' => $this->t('If enabled, users can select existing tags during annotation creation. This input does not support tag creation.'),
       '#default_value' => $config->get('recogito_integration.tag_selector') ?? 0,
     ];
 
     $form['tag_set']['preview_tag_selector'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Preview tag styling in tag selector.'),
-      '#description' => 'If enabled, the tag selector will display the tag styling in the dropdown.',
+      '#description' => $this->t('If enabled, the tag selector will display the tag styling in the dropdown.'),
       '#default_value' => $config->get('recogito_integration.preview_tag_selector') ?? 0,
     ];
 
@@ -389,7 +383,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       $form['tag_set']['term_settings_container']['create_nonexistent_tag'] = [
         '#type' => 'checkbox',
         '#title' => $this->t('Enable tag creation for non-existent tags.'),
-        '#description' => 'If enabled, users can create new tags during annotation creation. Only supports raw tag text input!',
+        '#description' => $this->t('If enabled, users can create new tags during annotation creation. Only supports raw tag text input!'),
         '#default_value' => $config->get('recogito_integration.create_nonexistent_tag') ?? 1,
       ];
       $form['tag_set']['term_settings_container']['default_tag'] = [

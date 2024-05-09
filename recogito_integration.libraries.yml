@@ -3,8 +3,6 @@ recogito_user:
     state:
       css/recogito.min.css: { weight: -4 }
       css/annotorious.min.css: { weight: -5 }
-      css/overwrite_hidden.css: {weight: -6}
-      css/custom.css: {weight: -5}
       css/style.css: {weight: -5}
   js:
     js/recogito.min.js: { weight: -5 }
@@ -23,8 +21,6 @@ recogito_admin:
     state:
       css/recogito.min.css: { weight: -4 }
       css/annotorious.min.css: { weight: -5 }
-      css/overwrite_hidden.css: {weight: -6}
-      css/custom.css: {weight: -5}
       css/style.css: {weight: -5}
   js:
     js/recogito.min.js: { weight: -5 }
@@ -37,4 +33,3 @@ recogito_admin:
     - core/drupal
     - core/drupalSettings
     - core/drupal.ajax
-

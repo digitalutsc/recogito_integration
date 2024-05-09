@@ -48,7 +48,8 @@ class RecogitoIntegrationController extends ControllerBase {
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
     ConfigFactoryInterface $config_factory,
-    AccountProxyInterface $current_user) {
+    AccountProxyInterface $current_user,
+  ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->configFactory = $config_factory;
     $this->currentUser = $current_user;
@@ -58,7 +59,7 @@ class RecogitoIntegrationController extends ControllerBase {
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
-    return new static(
+    return new self(
       $container->get('entity_type.manager'),
       $container->get('config.factory'),
       $container->get('current_user')

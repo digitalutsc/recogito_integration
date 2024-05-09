@@ -74,7 +74,8 @@ class AnnotationStorage extends ControllerBase {
     ConfigFactoryInterface $config_factory,
     EntityTypeManagerInterface $entity_type_manager,
     EntityFieldManagerInterface $entity_field_manager,
-    RouteMatchInterface $route_match) {
+    RouteMatchInterface $route_match,
+  ) {
     $this->currentUser = $current_user;
     $this->configFactory = $config_factory;
     $this->entityTypeManager = $entity_type_manager;
@@ -86,7 +87,7 @@ class AnnotationStorage extends ControllerBase {
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
-    return new static(
+    return new self(
       $container->get('current_user'),
       $container->get('config.factory'),
       $container->get('entity_type.manager'),
@@ -405,7 +406,7 @@ class AnnotationStorage extends ControllerBase {
         ]);
         $term->save();
       }
-      else if (!$term && !$tag_creation) {
+      elseif (!$term && !$tag_creation) {
         return NULL;
       }
       if ($term) {
@@ -557,7 +558,7 @@ class AnnotationStorage extends ControllerBase {
         ]);
         $term->save();
       }
-      else if (!$term && !$tag_creation) {
+      elseif (!$term && !$tag_creation) {
         return NULL;
       }
       if ($term) {
