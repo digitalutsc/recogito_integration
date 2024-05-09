@@ -287,7 +287,7 @@ class AnnotationStorage extends ControllerBase {
     }
     $user = $this->currentUser;
     $body = json_decode($request->getContent(), TRUE);
-    $editable = $user->hasPermission('recogito edit annotations') || ($user->hasPermission('recogito edit own annotations') && $node->getOwnerId() === $user->id);
+    $editable = $user->hasPermission('recogito edit annotations') || ($user->hasPermission('recogito edit own annotations') && $node->getOwnerId() === $user->id());
     if (!$editable) {
       return new JsonResponse('Insufficient permissions - User cannot edit this annotation.', 403);
     }
@@ -313,7 +313,7 @@ class AnnotationStorage extends ControllerBase {
       return new JsonResponse('Annotation not found.', 404);
     }
     $user = $this->currentUser;
-    $deletable = $user->hasPermission('recogito delete annotations') || ($user->hasPermission('recogito delete own annotations') && $node->getOwnerId() === $user->id);
+    $deletable = $user->hasPermission('recogito delete annotations') || ($user->hasPermission('recogito delete own annotations') && $node->getOwnerId() === $user->id());
     if (!$deletable) {
       return new JsonResponse('Insufficient permissions - User cannot delete this annotation.', 403);
     }
