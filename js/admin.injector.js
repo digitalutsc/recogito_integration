@@ -160,6 +160,7 @@ function initRecogito(domObj, settings) {
       setTimeout(() => attachTagSelector(tagStyleList), 3);
     }
     setTimeout(() => attachTagList(settings.tagOptions), 3);
+    setTimeout(() => attachWrapperOk(), 3);
   });
 
   txtAnnotation.on('createAnnotation', function(annotation) {
@@ -219,6 +220,28 @@ function initRecogito(domObj, settings) {
 }
 
 /**
+ * Attach a wrapper Annotate button in place of the OK button.
+ */
+function attachWrapperOk() {
+  let footer = $('#page').find('.r6o-footer');
+  footer.find('.ok-annotation').first().hide();
+  let wrapperOk = $('<button class="r6o-btn ok-annotation">Annotate</button>');
+  wrapperOk.on('click', function(event) {
+    let tagEntry = $('#page').find('.r6o-autocomplete').find('input').first();
+    return new Promise((resolve) => {
+      tagEntry.val('');
+      tagEntry.get(0).dispatchEvent(new InputEvent('input'));
+      resolve();
+    }).then(() => {
+      setTimeout(() => {
+        footer.find('.ok-annotation:hidden').first().click();
+      }, 3);
+    });
+  });
+  footer.append(wrapperOk);
+}
+
+/**
  * Update the tag functionality based on the changes in the DOM.
  * 
  * @param {object} domObj 
@@ -226,6 +249,7 @@ function initRecogito(domObj, settings) {
  */
 function attachTagsEvent(domObj, tagOptions) {
   let observer = new MutationObserver(function(mutations) {
+    let attached = false;
     for (let mutation of mutations) {
       if (mutation.type === 'childList') {
         for (let node of mutation.addedNodes) {
@@ -233,8 +257,12 @@ function attachTagsEvent(domObj, tagOptions) {
           if (!isNode) {
             continue;
           }
+          if (attached) {
+            return;
+          }
           if ((node.tagName === 'SPAN' && node.classList.contains('r6o-selection')) || 
               (node.tagName === 'g' && node.querySelector('.a9s-annotation.editable.selected[data-id="undefined"]'))) {
+            attached = true;
             clearSelected();
             if (tagOptions.defaultTags.length > 0) {
               setTimeout(() => attachDefaultTags(tagOptions.defaultTags), 3);
@@ -246,6 +274,7 @@ function attachTagsEvent(domObj, tagOptions) {
               setTimeout(() => attachTagSelector(tagOptions.tagStyleList), 3);
             }
             setTimeout(() => attachTagList(tagOptions), 3);
+            setTimeout(() => attachWrapperOk(), 3);
           }
         }
       }
@@ -608,6 +637,7 @@ function initAnnotorious(imgObj, settings) {
       setTimeout(() => attachTagSelector(tagStyleList), 3);
     }
     setTimeout(() => attachTagList(settings.tagOptions), 3);
+    setTimeout(() => attachWrapperOk(), 3);
   });
 
   imgAnnotation.on('createAnnotation', function(annotation) {
