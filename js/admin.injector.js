@@ -120,7 +120,6 @@ function initRecogito(domObj, settings) {
   let tagStyleList = settings.tagOptions.tagStyleList;
   let tagSelector = settings.tagOptions.selector;
   let tagTextEntry = settings.tagOptions.textInput;
-  let createTag = settings.tagOptions.createNewTag;
   let perms = settings.permissions;
   let target = settings.current_target;
   domObj.css({
@@ -149,18 +148,20 @@ function initRecogito(domObj, settings) {
     clearSelected();
     let editable = perms['edit'] || (perms['edit-own'] && userData['id'] === annotation.body[0].creator.id);
     if (!editable) {
-      setTimeout(() => readOnlyText(), 3);
+      setTimeout(() => readOnlyText(), 2);
       return;
     }
-    setTimeout(() => updateMenuByPermissions(settings, annotation), 3);
-    if (!tagTextEntry) {
-      setTimeout(() => hideTagInput(), 3);
-    }
-    if (tagSelector) {
-      setTimeout(() => attachTagSelector(tagStyleList), 3);
-    }
-    setTimeout(() => attachTagList(settings.tagOptions), 3);
-    setTimeout(() => attachWrapperOk(), 3);
+    setTimeout(() => {
+      updateMenuByPermissions(settings, annotation);
+      if (!tagTextEntry) {
+        hideTagInput();
+      }
+      if (tagSelector) {
+        attachTagSelector(tagStyleList);
+      }
+      attachTagList(settings.tagOptions);
+      attachWrapperOk('Update');
+    }, 2);
   });
 
   txtAnnotation.on('createAnnotation', function(annotation) {
@@ -203,16 +204,16 @@ function initRecogito(domObj, settings) {
   txtAnnotation.on('deleteAnnotation', function(annotation) {
     if (!perms['delete'] && !perms['delete-own']) {
       alert('You do not have permission to delete annotations.');
-      addAnnotation(txtAnnotation, annotation);
+      location.reload();
       return;
     }
     if (!perms['delete'] && perms['delete-own'] && userData['id'] !== annotation.body[0].creator.id) {
       alert('You cannot delete as this annotation was created by another user.');
-      addAnnotation(txtAnnotation, annotation);
+      location.reload();
       return;
     }
     if (!confirm('Are you sure you want to delete this annotation?')) {
-      addAnnotation(txtAnnotation, annotation);
+      location.reload();
       return;
     }
     deleteAnnotation(annotation);
@@ -221,11 +222,13 @@ function initRecogito(domObj, settings) {
 
 /**
  * Attach a wrapper Annotate button in place of the OK button.
+ * 
+ * @param {string} btnText
  */
-function attachWrapperOk() {
+function attachWrapperOk(btnText = 'Annotate') {
   let footer = $('#page').find('.r6o-footer');
   footer.find('.ok-annotation').first().hide();
-  let wrapperOk = $('<button class="r6o-btn ok-annotation">Annotate</button>');
+  let wrapperOk = $(`<button class="r6o-btn ok-annotation">${btnText}</button>`);
   wrapperOk.on('click', function(event) {
     let tagEntry = $('#page').find('.r6o-autocomplete').find('input').first();
     return new Promise((resolve) => {
@@ -235,7 +238,7 @@ function attachWrapperOk() {
     }).then(() => {
       setTimeout(() => {
         footer.find('.ok-annotation:hidden').first().click();
-      }, 3);
+      }, 1);
     });
   });
   footer.append(wrapperOk);
@@ -264,17 +267,19 @@ function attachTagsEvent(domObj, tagOptions) {
               (node.tagName === 'g' && node.querySelector('.a9s-annotation.editable.selected[data-id="undefined"]'))) {
             attached = true;
             clearSelected();
-            if (tagOptions.defaultTags.length > 0) {
-              setTimeout(() => attachDefaultTags(tagOptions.defaultTags), 3);
-            }
-            if (!tagOptions.textInput) {
-              setTimeout(() => hideTagInput(), 3);
-            }
-            if (tagOptions.selector) {
-              setTimeout(() => attachTagSelector(tagOptions.tagStyleList), 3);
-            }
-            setTimeout(() => attachTagList(tagOptions), 3);
-            setTimeout(() => attachWrapperOk(), 3);
+            setTimeout(() => {
+              if (tagOptions.defaultTags.length > 0) {
+                attachDefaultTags(tagOptions.defaultTags);
+              }
+              if (!tagOptions.textInput) {
+                hideTagInput();
+              }
+              if (tagOptions.selector) {
+                attachTagSelector(tagOptions.tagStyleList);
+              }
+              attachTagList(tagOptions);
+              attachWrapperOk();
+            }, 2);
           }
         }
       }
@@ -451,7 +456,9 @@ function submitTag(inputBox, tag) {
     entryDom.dispatchEvent(new InputEvent('input'));
     resolve();
   }).then(() => {
-    entryDom.dispatchEvent(new KeyboardEvent('keydown', {which: 13}));
+    setTimeout(() => {
+      entryDom.dispatchEvent(new KeyboardEvent('keydown', {which: 13}));
+    }, 1);
   });
 }
 
@@ -605,7 +612,6 @@ function initAnnotorious(imgObj, settings) {
   let userData = settings.userData;
   let tagSelector = settings.tagOptions.selector;
   let tagTextEntry = settings.tagOptions.textInput;
-  let createTag = settings.tagOptions.createNewTag;
   let target = settings.current_target;
   let imgAnnotation = Annotorious.init({
     image: imgObj[0],
@@ -629,15 +635,21 @@ function initAnnotorious(imgObj, settings) {
 
   imgAnnotation.on('selectAnnotation', function(annotation) {
     clearSelectedForImage(annotation.id);
-    setTimeout(() => updateMenuByPermissions(settings, annotation), 3);
-    if (!tagTextEntry) {
-      setTimeout(() => hideTagInput(), 3);
+    let editable = perms['edit'] || (perms['edit-own'] && userData['id'] === annotation.body[0].creator.id);
+    if (!editable) {
+      return;
     }
-    if (tagSelector) {
-      setTimeout(() => attachTagSelector(tagStyleList), 3);
-    }
-    setTimeout(() => attachTagList(settings.tagOptions), 3);
-    setTimeout(() => attachWrapperOk(), 3);
+    setTimeout(() => {
+      updateMenuByPermissions(settings, annotation);
+      if (!tagTextEntry) {
+        hideTagInput();
+      }
+      if (tagSelector) {
+        attachTagSelector(tagStyleList);
+      }
+      attachTagList(settings.tagOptions);
+      attachWrapperOk('Update');
+    }, 2);
   });
 
   imgAnnotation.on('createAnnotation', function(annotation) {
@@ -676,19 +688,18 @@ function initAnnotorious(imgObj, settings) {
   });
 
   imgAnnotation.on('deleteAnnotation', function(annotation) {
-    let editable = perms['edit'] || (perms['edit-own'] && userData['id'] === annotation.body[0].creator.id);
     if (!perms['delete'] && !perms['delete-own']) {
       alert('You do not have permission to delete annotations.');
-      addImageAnnotation(imgAnnotation, annotation, !editable);
+      location.reload();
       return;
     }
     if (!perms['delete'] && perms['delete-own'] && userData['id'] !== annotation.body[0].creator.id) {
       alert('You cannot delete as this annotation was created by another user.');
-      addImageAnnotation(imgAnnotation, annotation, !editable);
+      location.reload();
       return;
     }
     if (!confirm('Are you sure you want to delete this annotation?')) {
-      addImageAnnotation(imgAnnotation, annotation, !editable);
+      location.reload();
       return;
     }
     deleteAnnotation(annotation);
