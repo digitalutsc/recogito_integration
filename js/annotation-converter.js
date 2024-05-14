@@ -1,8 +1,8 @@
 var AnnotationConverter = (function() {
   /**
    * Convert a W3C annotation to a data compatible with database.
-   * 
-   * @param {object} annotation 
+   *
+   * @param {object} annotation
    * @returns {object}
    */
   function convertW3CToData(annotation) {
@@ -19,6 +19,7 @@ var AnnotationConverter = (function() {
             case 'TextQuoteSelector':
               data['target_exact'] = encodeURIComponent(selector.exact);
               break;
+
             case 'TextPositionSelector':
               data['target_start'] = selector.start;
               data['target_end'] = selector.end;
@@ -26,6 +27,7 @@ var AnnotationConverter = (function() {
           }
         }
         break;
+
       case 'Image':
         data['image_value'] = annotation.target.selector.value;
         data['image_source'] = annotation.target.source;
@@ -38,8 +40,8 @@ var AnnotationConverter = (function() {
 
   /**
    * Converts data from database into W3C annotation.
-   * 
-   * @param {object} data 
+   *
+   * @param {object} data
    * @returns {object}
    */
   function convertDataToW3C(data) {
@@ -63,6 +65,7 @@ var AnnotationConverter = (function() {
         });
         annotation['style'] = data['style'];
         break;
+
       case 'Image':
         annotation['target'].selector = {
           conformsTo: "http://www.w3.org/TR/media-frags/",

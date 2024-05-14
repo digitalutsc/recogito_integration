@@ -1,16 +1,15 @@
 let imageAnnotations = {};
-const MAX_TAG_LENGTH = '150';
 let textAnnotations = {};
 let $ = jQuery;
 
 /**
- * Converts a hexadecimal color code into the corresponding RGBA string. 
+ * Converts a hexadecimal color code into the corresponding RGBA string.
  * Credit:  https://stackoverflow.com/a/21648508
- * 
+ *
  * @param {string} hex the hex color code
  * @returns the RGBA representation of hex
  */
-function hexToRgbA(hex, transparency = 1){
+function hexToRgbA(hex, transparency = 1) {
   let c;
   transparency === null ? 0 : transparency;
   if(/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)){
@@ -24,7 +23,7 @@ function hexToRgbA(hex, transparency = 1){
   throw new Error('Bad Hex');
 }
 
-$(document).ready(function () { 
+$(document).ready(function() {
   let perms = drupalSettings.recogito_integration.permissions;
   if (perms['view']) {
     initAnnotations(drupalSettings.recogito_integration);
@@ -34,7 +33,7 @@ $(document).ready(function () {
 /**
  * Initialize the annotation for the entire page.
  *
- * @param {object} settings 
+ * @param {object} settings
  */
 function initAnnotations(settings) {
   let customDOM = settings.custom_elements;
@@ -50,7 +49,7 @@ function initAnnotations(settings) {
         case 'view_field':
           attachAnnotations($(this), settings);
           break;
-      } 
+      }
     });
   }
   for (let element of customDOM) {
@@ -90,8 +89,8 @@ function attachAnnotations(domObj, settings) {
  * Initialize a jQuery object with annotations based on content.
  * Image and Text annotations are handled separately.
  *
- * @param {object} domObj 
- * @param {object} settings 
+ * @param {object} domObj
+ * @param {object} settings
  */
 function initComponents(domObj, settings) {
   let img = $(domObj).find('img');
@@ -105,9 +104,9 @@ function initComponents(domObj, settings) {
 
 /**
  * Initialize Recogito for the particular jQuery object.
- * 
- * @param {object} domObj 
- * @param {object} settings 
+ *
+ * @param {object} domObj
+ * @param {object} settings
  */
 function initRecogito(domObj, settings) {
   let target = settings.current_target;
@@ -144,9 +143,9 @@ function clearSelected() {
 
 /**
  * Initialize Annotorious for the particular jQuery object.
- * 
- * @param {object} imgObj 
- * @param {object} settings 
+ *
+ * @param {object} imgObj
+ * @param {object} settings
  */
 function initAnnotorious(imgObj, settings) {
   let target = settings.current_target;
@@ -191,9 +190,9 @@ function clearSelectedForImage(annotationId) {
 
 /**
  * Adds text annotation to the desire Recogito instance.
- * 
- * @param {Recogito} annotationInstance 
- * @param {object} annotation 
+ *
+ * @param {Recogito} annotationInstance
+ * @param {object} annotation
  */
 function addAnnotation(annotationInstance, annotation) {
   let style = annotation.style;
@@ -203,9 +202,9 @@ function addAnnotation(annotationInstance, annotation) {
 
 /**
  * Apply the style to the annotation by ID.
- * 
- * @param {string} annotationId 
- * @param {object} style 
+ *
+ * @param {string} annotationId
+ * @param {object} style
  */
 function applyStyle(annotationId, style) {
   $('#page').find(`[data-id='${annotationId}']`).css({
@@ -217,10 +216,10 @@ function applyStyle(annotationId, style) {
 
 /**
  * Adds image annotation to the desire Annotorious instance.
- * 
- * @param {Annotorious} annotationInstance 
- * @param {object} annotation 
- * @param {boolean} readOnly 
+ *
+ * @param {Annotorious} annotationInstance
+ * @param {object} annotation
+ * @param {boolean} readOnly
  */
 function addImageAnnotation(annotationInstance, annotation, readOnly) {
   annotationInstance.addAnnotation(annotation, readOnly);
@@ -228,8 +227,8 @@ function addImageAnnotation(annotationInstance, annotation, readOnly) {
 
 /**
  * Get all annotations of the current page.
- * 
- * @param {object} settings 
+ *
+ * @param {object} settings
  */
 function getAnnotations(settings) {
   $.ajax({
@@ -252,6 +251,7 @@ function getAnnotations(settings) {
               }
             }
             break;
+
           case 'Image':
             annotation.type = 'Annotation';
             if (imageAnnotations[annotation.target_element]) {

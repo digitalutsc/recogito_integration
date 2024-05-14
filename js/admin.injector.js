@@ -1,16 +1,15 @@
 let imageAnnotations = {};
-const MAX_TAG_LENGTH = '150';
 let textAnnotations = {};
 let $ = jQuery;
 
 /**
- * Converts a hexadecimal color code into the corresponding RGBA string. 
+ * Converts a hexadecimal color code into the corresponding RGBA string.
  * Credit:  https://stackoverflow.com/a/21648508
  *
  * @param {string} hex the hex color code
  * @returns the RGBA representation of hex
  */
-function hexToRgbA(hex, transparency = 1){
+function hexToRgbA(hex, transparency = 1) {
   let c;
   transparency === null ? 0 : transparency;
   if(/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)){
@@ -24,7 +23,7 @@ function hexToRgbA(hex, transparency = 1){
   throw new Error('Bad Hex');
 }
 
-$(document).ready(function () { 
+$(document).ready(function() {
   let perms = drupalSettings.recogito_integration.permissions;
   let isAdmin = drupalSettings.recogito_integration.admin;
   if (!isAdmin) {
@@ -38,7 +37,7 @@ $(document).ready(function () {
 /**
  * Initialize the annotation for the entire page.
  *
- * @param {object} settings 
+ * @param {object} settings
  */
 function initAnnotations(settings) {
   let customDOM = settings.custom_elements;
@@ -54,7 +53,7 @@ function initAnnotations(settings) {
         case 'view_field':
           attachAnnotations($(this), settings);
           break;
-      } 
+      }
     });
   }
   for (let element of customDOM) {
@@ -94,8 +93,8 @@ function attachAnnotations(domObj, settings) {
  * Initialize a jQuery object with annotations based on content.
  * Image and Text annotations are handled separately.
  *
- * @param {object} domObj 
- * @param {object} settings 
+ * @param {object} domObj
+ * @param {object} settings
  */
 function initComponents(domObj, settings) {
   let img = $(domObj).find('img');
@@ -110,9 +109,9 @@ function initComponents(domObj, settings) {
 
 /**
  * Initialize Recogito for the particular jQuery object.
- * 
- * @param {object} domObj 
- * @param {object} settings 
+ *
+ * @param {object} domObj
+ * @param {object} settings
  */
 function initRecogito(domObj, settings) {
   let userData = settings.userData;
@@ -222,7 +221,7 @@ function initRecogito(domObj, settings) {
 
 /**
  * Attach a wrapper Annotate button in place of the OK button.
- * 
+ *
  * @param {string} btnText
  */
 function attachWrapperOk(btnText = 'Annotate') {
@@ -246,9 +245,9 @@ function attachWrapperOk(btnText = 'Annotate') {
 
 /**
  * Update the tag functionality based on the changes in the DOM.
- * 
- * @param {object} domObj 
- * @param {object} defaultTags 
+ *
+ * @param {object} domObj
+ * @param {object} defaultTags
  */
 function attachTagsEvent(domObj, tagOptions) {
   let observer = new MutationObserver(function(mutations) {
@@ -263,7 +262,7 @@ function attachTagsEvent(domObj, tagOptions) {
           if (attached) {
             return;
           }
-          if ((node.tagName === 'SPAN' && node.classList.contains('r6o-selection')) || 
+          if ((node.tagName === 'SPAN' && node.classList.contains('r6o-selection')) ||
               (node.tagName === 'g' && node.querySelector('.a9s-annotation.editable.selected[data-id="undefined"]'))) {
             attached = true;
             clearSelected();
@@ -290,7 +289,7 @@ function attachTagsEvent(domObj, tagOptions) {
 
 /**
  * Show/Hide the buttons in the tag list for a specific tag.
- * 
+ *
  * @param {object} listOptions
  * @param {string} tag
  * @param {boolean} adding
@@ -312,7 +311,7 @@ function selectorListToggle(listOptions, tag, adding) {
 
 /**
  * Attach the tag list of the editor to remove duplicates or monitor list for tag selector.
- * 
+ *
  * @param {object} tagOptions
  */
 function attachTagList(tagOptions) {
@@ -331,7 +330,7 @@ function attachTagList(tagOptions) {
           let tagContent = null;
           if (node.tagName === 'LI') {
             tagContent = node.querySelector('span.r6o-label')?.textContent;
-          } 
+          }
           else if (node.tagName === 'UL') {
             tagContent = node.querySelector('li span.r6o-label')?.textContent;
           }
@@ -356,7 +355,7 @@ function attachTagList(tagOptions) {
             let tagContent = null;
             if (node.tagName === 'LI') {
               tagContent = node.querySelector('span.r6o-label')?.textContent;
-            } 
+            }
             else if (node.tagName === 'UL') {
               tagContent = node.querySelector('li span.r6o-label')?.textContent;
             }
@@ -374,10 +373,10 @@ function attachTagList(tagOptions) {
 
 /**
  * Check if the tag is in the current list of tags from the tag list.
- * 
+ *
  * @param {string} tag
  * @param {boolean} last
- * 
+ *
  * @returns {boolean}
  */
 function isInCurrentTags(tag, last) {
@@ -397,7 +396,7 @@ function isInCurrentTags(tag, last) {
 
 /**
  * Fetch the current list of tags from the tag list
- * 
+ *
  * @returns {array}
  */
 function fetchCurrentTags() {
@@ -428,9 +427,9 @@ function readOnlyText() {
 
 /**
  * Update the menu based on the permissions of the user.
- * 
- * @param {object} settings 
- * @param {object} annotation 
+ *
+ * @param {object} settings
+ * @param {object} annotation
  */
 function updateMenuByPermissions(settings, annotation) {
   let perms = settings.permissions;
@@ -445,9 +444,9 @@ function updateMenuByPermissions(settings, annotation) {
 
 /**
  * Submits tags to the tagging input box.
- * 
- * @param {object} inputBox 
- * @param {string} tag 
+ *
+ * @param {object} inputBox
+ * @param {string} tag
  */
 function submitTag(inputBox, tag) {
   let entryDom = inputBox.get(0);
@@ -464,7 +463,7 @@ function submitTag(inputBox, tag) {
 
 /**
  * Remove tag in the tagging list.
- * 
+ *
  * @param {string} tag
  */
 function removeTag(tag) {
@@ -477,8 +476,8 @@ function removeTag(tag) {
 
 /**
  * Attach default tags to the annotations.
- * 
- * @param {object} defaultTags 
+ *
+ * @param {object} defaultTags
  */
 function attachDefaultTags(defaultTags) {
   let element = $('#page').find('.r6o-tag').first();
@@ -500,7 +499,7 @@ function attachDefaultTags(defaultTags) {
 
 /**
  * Attach the tag selector to the annotations.
- * 
+ *
  * @param {array} tags
  */
 function attachTagSelector(tags) {
@@ -601,9 +600,9 @@ function hideTagInput() {
 
 /**
  * Initialize Annotorious for the particular jQuery object.
- * 
- * @param {object} imgObj 
- * @param {object} settings 
+ *
+ * @param {object} imgObj
+ * @param {object} settings
  */
 function initAnnotorious(imgObj, settings) {
   let tagList = settings.tagOptions.tagList;
@@ -708,7 +707,7 @@ function initAnnotorious(imgObj, settings) {
 
 /**
  * Clear all selected annotations but for image annotation selects. Treat each as cancel button click.
- * 
+ *
  * @param {string} annotationId
  */
 function clearSelectedForImage(annotationId) {
@@ -724,9 +723,9 @@ function clearSelectedForImage(annotationId) {
 
 /**
  * Adds text annotation to the desire Recogito instance.
- * 
- * @param {Recogito} annotationInstance 
- * @param {object} annotation 
+ *
+ * @param {Recogito} annotationInstance
+ * @param {object} annotation
  */
 function addAnnotation(annotationInstance, annotation) {
   let style = annotation.style;
@@ -736,9 +735,9 @@ function addAnnotation(annotationInstance, annotation) {
 
 /**
  * Apply the style to the annotation by ID.
- * 
- * @param {string} annotationId 
- * @param {object} style 
+ *
+ * @param {string} annotationId
+ * @param {object} style
  */
 function applyStyle(annotationId, style) {
   $('#page').find(`[data-id='${annotationId}']`).css({
@@ -750,10 +749,10 @@ function applyStyle(annotationId, style) {
 
 /**
  * Adds image annotation to the desire Annotorious instance.
- * 
- * @param {Annotorious} annotationInstance 
- * @param {object} annotation 
- * @param {boolean} readOnly 
+ *
+ * @param {Annotorious} annotationInstance
+ * @param {object} annotation
+ * @param {boolean} readOnly
  */
 function addImageAnnotation(annotationInstance, annotation, readOnly) {
   annotationInstance.addAnnotation(annotation, readOnly);
@@ -761,8 +760,8 @@ function addImageAnnotation(annotationInstance, annotation, readOnly) {
 
 /**
  * Get all annotations of the current page.
- * 
- * @param {object} settings 
+ *
+ * @param {object} settings
  */
 function getAnnotations(settings) {
   let perms = settings.permissions;
@@ -787,6 +786,7 @@ function getAnnotations(settings) {
               }
             }
             break;
+
           case 'Image':
             annotation.type = 'Annotation';
             if (imageAnnotations[annotation.target_element]) {
@@ -809,8 +809,8 @@ function getAnnotations(settings) {
 
 /**
  * Create an annotation in the database.
- * 
- * @param {object} annotation 
+ *
+ * @param {object} annotation
  */
 function createAnnotation(annotation) {
   let annotationData = AnnotationConverter.convertW3CToData(annotation);
@@ -833,8 +833,8 @@ function createAnnotation(annotation) {
 
 /**
  * Update an annotation in the database.
- * 
- * @param {object} annotation 
+ *
+ * @param {object} annotation
  */
 function updateAnnotation(annotation) {
   let annotationData = AnnotationConverter.convertW3CToData(annotation);
@@ -855,8 +855,8 @@ function updateAnnotation(annotation) {
 }
 /**
  * Delete an annotation from the database.
- * 
- * @param {object} annotation 
+ *
+ * @param {object} annotation
  */
 function deleteAnnotation(annotation) {
   $.ajax({

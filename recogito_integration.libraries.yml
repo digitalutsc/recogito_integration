@@ -1,13 +1,12 @@
 recogito_user:
   css:
     state:
-      css/recogito.min.css: { weight: -4 }
+      css/recogito.min.css: { weight: -5 }
       css/annotorious.min.css: { weight: -5 }
       css/style.css: {weight: -5}
   js:
-    js/recogito.min.js: { weight: -5 }
-    js/annotorious.min.js: { weight: -4 }
-    js/jquery.simplyCountable.js: { weight: -3}
+    js/recogito.min.js: { weight: -4 }
+    js/annotorious.min.js: { weight: -3 }
     js/annotation-converter.js: { weight: -2 }
     js/user.injector.js: { weight: -1 }
   dependencies:
@@ -19,13 +18,12 @@ recogito_user:
 recogito_admin:
   css:
     state:
-      css/recogito.min.css: { weight: -4 }
+      css/recogito.min.css: { weight: -5 }
       css/annotorious.min.css: { weight: -5 }
       css/style.css: {weight: -5}
   js:
-    js/recogito.min.js: { weight: -5 }
-    js/annotorious.min.js: { weight: -4 }
-    js/jquery.simplyCountable.js: { weight: -3}
+    js/recogito.min.js: { weight: -4 }
+    js/annotorious.min.js: { weight: -3 }
     js/annotation-converter.js: { weight: -2 }
     js/admin.injector.js: { weight: -1 }
   dependencies:

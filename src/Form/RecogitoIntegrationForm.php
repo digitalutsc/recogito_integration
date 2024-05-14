@@ -38,6 +38,12 @@ class RecogitoIntegrationForm extends ConfigFormBase {
   protected $cacheTagsInvalidator;
 
   /**
+   * The vocabulary.
+   *
+   * @var \Drupal\taxonomy\Entity\Vocabulary
+   */
+
+  /**
    * Constructs a new RecogitoIntegrationForm.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
@@ -46,15 +52,19 @@ class RecogitoIntegrationForm extends ConfigFormBase {
    *   The entity field manager.
    * @param \Drupal\Core\Cache\CacheTagsInvalidatorInterface $cache_tags_invalidator
    *   The cache tags invalidator.
+   * @param \Drupal\taxonomy\Entity\Vocabulary $vocabulary
+   *   The vocabulary.
    */
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
     EntityFieldManagerInterface $entity_field_manager,
     CacheTagsInvalidatorInterface $cache_tags_invalidator,
+    Vocabulary $vocabulary,
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->entityFieldManager = $entity_field_manager;
     $this->cacheTagsInvalidator = $cache_tags_invalidator;
+    $this->vocabulary = $vocabulary;
   }
 
   /**
@@ -64,7 +74,8 @@ class RecogitoIntegrationForm extends ConfigFormBase {
     return new self(
       $container->get('entity_type.manager'),
       $container->get('entity_field.manager'),
-      $container->get('cache_tags.invalidator')
+      $container->get('cache_tags.invalidator'),
+      new Vocabulary(),
     );
   }
 
@@ -321,7 +332,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       '#default_value' => $config->get('recogito_integration.underline_style') ?? 'none',
     ];
 
-    $vocabularies = Vocabulary::loadMultiple();
+    $vocabularies = $this->vocabulary->loadMultiple();
     $vocabulary_options = ['' => '-- Select --'];
     foreach ($vocabularies as $vocabulary) {
       $vocabulary_options[$vocabulary->id()] = $vocabulary->label();
