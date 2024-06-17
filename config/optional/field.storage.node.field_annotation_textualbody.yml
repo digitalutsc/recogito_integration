@@ -2,19 +2,21 @@ langcode: en
 status: true
 dependencies:
   module:
+    - entity_reference_revisions
     - node
+    - paragraphs
   enforced:
     module:
       - recogito_integration
-id: node.field_annotation_id
-field_name: field_annotation_id
+id: node.field_annotation_textualbody
+field_name: field_annotation_textualbody
 entity_type: node
-type: string_long
+type: entity_reference_revisions
 settings:
-  case_sensitive: false
-module: core
+  target_type: paragraph
+module: entity_reference_revisions
 locked: false
-cardinality: 1
+cardinality: -1
 translatable: true
 indexes: {  }
 persist_with_no_fields: false

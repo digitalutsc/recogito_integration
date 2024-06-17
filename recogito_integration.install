@@ -1,16 +1,22 @@
 <?php
+
+/**
+ * @file
+ * Contains uninstall functions for the Recogito Integration module.
+ */
+
 /**
  * Implements hook_uninstall().
  */
 function recogito_integration_uninstall() {
   $entity_type_manager = \Drupal::entityTypeManager();
 
-  $content_types = ['annotation', 'annotation_textualbody', 'annotation_collection'];
+  $content_types = ['annotation'];
 
   foreach ($content_types as $content_type) {
     $query = $entity_type_manager->getStorage('node')->getQuery();
     $query->condition('type', $content_type);
-    $query->accessCheck(FALSE); 
+    $query->accessCheck(FALSE);
     $nids = $query->execute();
 
     if (!empty($nids)) {

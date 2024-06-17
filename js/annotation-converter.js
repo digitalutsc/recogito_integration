@@ -1,8 +1,8 @@
 var AnnotationConverter = (function() {
   /**
    * Convert a W3C annotation to a data compatible with database.
-   * 
-   * @param {object} annotation 
+   *
+   * @param {object} annotation
    * @returns {object}
    */
   function convertW3CToData(annotation) {
@@ -13,12 +13,13 @@ var AnnotationConverter = (function() {
       body['value'] = encodeURIComponent(body['value']);
     }
     switch (annotation.type) {
-      case 'Annotation':
+      case 'Text':
         for (let selector of annotation.target.selector) {
           switch (selector.type) {
             case 'TextQuoteSelector':
               data['target_exact'] = encodeURIComponent(selector.exact);
               break;
+
             case 'TextPositionSelector':
               data['target_start'] = selector.start;
               data['target_end'] = selector.end;
@@ -26,7 +27,8 @@ var AnnotationConverter = (function() {
           }
         }
         break;
-      case 'Selection':
+
+      case 'Image':
         data['image_value'] = annotation.target.selector.value;
         data['image_source'] = annotation.target.source;
         break;
@@ -38,8 +40,8 @@ var AnnotationConverter = (function() {
 
   /**
    * Converts data from database into W3C annotation.
-   * 
-   * @param {object} data 
+   *
+   * @param {object} data
    * @returns {object}
    */
   function convertDataToW3C(data) {
@@ -49,7 +51,7 @@ var AnnotationConverter = (function() {
     annotation['type'] = data['type'];
     annotation['target'] = {selector: []};
     switch (annotation['type']) {
-      case 'Annotation':
+      case 'Text':
         if (data['target_exact'] > 0) {
           annotation['target'].selector.push({
             type: 'TextQuoteSelector',
@@ -63,7 +65,8 @@ var AnnotationConverter = (function() {
         });
         annotation['style'] = data['style'];
         break;
-      case 'Selection':
+
+      case 'Image':
         annotation['target'].selector = {
           conformsTo: "http://www.w3.org/TR/media-frags/",
           type: 'FragmentSelector',

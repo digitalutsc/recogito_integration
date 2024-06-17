@@ -2,16 +2,17 @@ langcode: en
 status: true
 dependencies:
   module:
-    - node
+    - paragraphs
+    - taxonomy
   enforced:
     module:
       - recogito_integration
-id: node.field_annotation_id
-field_name: field_annotation_id
-entity_type: node
-type: string_long
+id: paragraph.field_annotation_tag_reference
+field_name: field_annotation_tag_reference
+entity_type: paragraph
+type: entity_reference
 settings:
-  case_sensitive: false
+  target_type: taxonomy_term
 module: core
 locked: false
 cardinality: 1

@@ -2,16 +2,14 @@ langcode: en
 status: true
 dependencies:
   module:
-    - node
-  enforced:
-    module:
-      - recogito_integration
-id: node.field_annotation_id
-field_name: field_annotation_id
-entity_type: node
-type: string_long
+    - paragraphs
+    - user
+id: paragraph.field_annotation_creator
+field_name: field_annotation_creator
+entity_type: paragraph
+type: entity_reference
 settings:
-  case_sensitive: false
+  target_type: user
 module: core
 locked: false
 cardinality: 1

@@ -6,12 +6,12 @@ dependencies:
   enforced:
     module:
       - recogito_integration
-id: node.field_annotation_id
-field_name: field_annotation_id
+id: node.field_annotation_node_reference
+field_name: field_annotation_node_reference
 entity_type: node
-type: string_long
+type: entity_reference
 settings:
-  case_sensitive: false
+  target_type: node
 module: core
 locked: false
 cardinality: 1

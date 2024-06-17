@@ -6,8 +6,8 @@ dependencies:
   enforced:
     module:
       - recogito_integration
-id: node.field_annotation_id
-field_name: field_annotation_id
+id: node.field_annotation_target_field
+field_name: field_annotation_target_field
 entity_type: node
 type: string_long
 settings:
