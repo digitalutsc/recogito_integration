@@ -808,11 +808,39 @@ function getAnnotations(settings) {
 }
 
 /**
- * Create an annotation in the database.
+ * Remove the duplicate tags.
+ *
+ * @param {object} annotation
+ */
+function removeDuplicateTags(annotation) {
+  let bodies = annotation.body;
+  let newBody = [];
+  let uniqueTags = [];
+  for (let body of bodies) {
+    if (body.purpose === 'tagging') {
+      if (!uniqueTags.includes(body.value)) {
+        uniqueTags.push(body.value);
+        newBody.push(body);
+      }
+      else {
+        newBody.push(body);
+      }
+    }
+    else if (body.purpose === 'commenting') {
+      newBody.push(body);
+    }
+  }
+  annotation.body = newBody;
+  return annotation;
+}
+
+/**
+ * Create an annotation in by calling the database API.
  *
  * @param {object} annotation
  */
 function createAnnotation(annotation) {
+  annotation = removeDuplicateTags(annotation);
   let annotationData = AnnotationConverter.convertW3CToData(annotation);
   annotationData['nodeId'] = annotation.node_id;
   $.ajax({

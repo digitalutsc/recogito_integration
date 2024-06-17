@@ -38,12 +38,6 @@ class RecogitoIntegrationForm extends ConfigFormBase {
   protected $cacheTagsInvalidator;
 
   /**
-   * The vocabulary.
-   *
-   * @var \Drupal\taxonomy\Entity\Vocabulary
-   */
-
-  /**
    * Constructs a new RecogitoIntegrationForm.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
@@ -51,20 +45,16 @@ class RecogitoIntegrationForm extends ConfigFormBase {
    * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager
    *   The entity field manager.
    * @param \Drupal\Core\Cache\CacheTagsInvalidatorInterface $cache_tags_invalidator
-   *   The cache tags invalidator.
-   * @param \Drupal\taxonomy\Entity\Vocabulary $vocabulary
-   *   The vocabulary.
+   *   The cache tags invalidator..
    */
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
     EntityFieldManagerInterface $entity_field_manager,
     CacheTagsInvalidatorInterface $cache_tags_invalidator,
-    Vocabulary $vocabulary,
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->entityFieldManager = $entity_field_manager;
     $this->cacheTagsInvalidator = $cache_tags_invalidator;
-    $this->vocabulary = $vocabulary;
   }
 
   /**
@@ -75,7 +65,6 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       $container->get('entity_type.manager'),
       $container->get('entity_field.manager'),
       $container->get('cache_tags.invalidator'),
-      new Vocabulary(),
     );
   }
 
@@ -332,7 +321,7 @@ class RecogitoIntegrationForm extends ConfigFormBase {
       '#default_value' => $config->get('recogito_integration.underline_style') ?? 'none',
     ];
 
-    $vocabularies = $this->vocabulary->loadMultiple();
+    $vocabularies = $this->entityTypeManager->getStorage('taxonomy_vocabulary')->loadMultiple();
     $vocabulary_options = ['' => '-- Select --'];
     foreach ($vocabularies as $vocabulary) {
       $vocabulary_options[$vocabulary->id()] = $vocabulary->label();
@@ -364,15 +353,15 @@ class RecogitoIntegrationForm extends ConfigFormBase {
 
     $form['tag_set']['tag_text_input'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Enable tag text input for new tags.'),
-      '#description' => $this->t('If enabled, users can input new tags during annotation creation given that the tag creation option is enabled.'),
+      '#title' => $this->t('Enable tag text input for tags.'),
+      '#description' => $this->t('If enabled, users can type tags during annotation creation. This input supports tag creation if that option is enabled.'),
       '#default_value' => $config->get('recogito_integration.tag_text_input') ?? 1,
     ];
 
     $form['tag_set']['tag_selector'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Enable tag selection for existing tags.'),
-      '#description' => $this->t('If enabled, users can select existing tags during annotation creation. This input does not support tag creation.'),
+      '#title' => $this->t('Enable tag dropdown selection for existing tags.'),
+      '#description' => $this->t('If enabled, users can select existing tags using a dropdown during annotation creation. This input does not support tag creation.'),
       '#default_value' => $config->get('recogito_integration.tag_selector') ?? 0,
     ];
 

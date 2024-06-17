@@ -8,6 +8,7 @@ use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountProxyInterface;
+use Drupal\Component\Utility\Html;
 use Drupal\node\Entity\Node;
 use Drupal\paragraphs\Entity\Paragraph;
 use Drupal\taxonomy\Entity\Term;
@@ -96,6 +97,19 @@ class AnnotationStorage extends ControllerBase {
     );
   }
 
+  public function validateStyle(array $style) {
+    $colorRegex = '/^#(?:[0-9a-fA-F]{3}){1,2}$/';
+    $lineStyles = ['dotted', 'dashed', 'double', 'solid', 'groove', 'ridge', 'inset', 'outset', 'none'];
+    $config = $this->configFactory->get('recogito_integration.settings');
+    $style['text_color'] = preg_match($colorRegex, $style['text_color']) ? $style['text_color'] : ($config->get('recogito_integration.text_color') ?? '#000000');
+    $style['background_color'] = preg_match($colorRegex, $style['background_color']) ? $style['background_color'] : ($config->get('recogito_integration.background_color') ?? '#000000');
+    $style['underline_color'] = preg_match($colorRegex, $style['underline_color']) ? $style['underline_color'] : ($config->get('recogito_integration.underline_color') ?? '#000000');
+    $style['underline_style'] = in_array($style['underline_style'], $lineStyles) ? $style['underline_style'] : ($config->get('recogito_integration.underline_style') ?? 'none');
+    $style['underline_stroke'] = is_numeric($style['underline_stroke']) ? $style['underline_stroke'] : ($config->get('recogito_integration.underline_stroke') ?? '0');
+    $style['background_transparency'] = is_numeric($style['background_transparency']) ? $style['background_transparency'] : ($config->get('recogito_integration.background_transparency') ?? '0');
+    return $style;
+  }
+
   /**
    * Constructs the style for an annotation based on its tags.
    *
@@ -141,6 +155,7 @@ class AnnotationStorage extends ControllerBase {
         'underline_color' => $min_style[0]['underline_color'],
         'background_transparency' => $min_style[0]['background_transparency'],
       ];
+      $style = self::validateStyle($style);
     }
     return $style;
   }
@@ -160,8 +175,8 @@ class AnnotationStorage extends ControllerBase {
       return new JsonResponse('Insufficient permissions - User cannot view annotations.', 403);
     }
     $nid = $request->headers->get('nodeId');
-    if (!$nid) {
-      return new JsonResponse('Unable to retrieve annotations as no ID was passed.', 500);
+    if (!$nid || !is_numeric($nid)) {
+      return new JsonResponse('Unable to retrieve annotations as no valid ID was passed.', 500);
     }
     $annotations = self::getAnnotationForNode($nid);
     if (!$annotations) {
@@ -184,14 +199,14 @@ class AnnotationStorage extends ControllerBase {
       foreach ($textualbodyParagraphs as $textualbody) {
         $textualOwner = $textualbody->get('field_annotation_creator')->entity;
         $bodyContent = [
-          'created' => $textualbody->get('field_annotation_date_created')->getString(),
-          'modified' => $textualbody->get('field_annotation_last_modified')->getString(),
+          'created' => Html::escape($textualbody->get('field_annotation_date_created')->getString()),
+          'modified' => Html::escape($textualbody->get('field_annotation_last_modified')->getString()),
           'purpose' => $textualbody->get('field_annotation_purpose')->getString(),
         ];
         if ($textualOwner) {
           $bodyContent['creator'] = [
             'id' => $textualOwner->id(),
-            'name' => $textualOwner->getDisplayName(),
+            'name' => Html::escape($textualOwner->getDisplayName()),
           ];
         }
         else {
@@ -204,11 +219,11 @@ class AnnotationStorage extends ControllerBase {
           $tag = $textualbody->get('field_annotation_tag_reference')->entity;
           if ($tag) {
             $tags[] = $tag;
-            $bodyContent['value'] = $tag->getName();
+            $bodyContent['value'] = Html::escape($tag->getName());
           }
         }
         else {
-          $bodyContent['value'] = $textualbody->get('field_annotation_comment')->getString();
+          $bodyContent['value'] = Html::escape($textualbody->get('field_annotation_comment')->getString());
         }
         $textualbodies[] = $bodyContent;
       }
@@ -262,8 +277,8 @@ class AnnotationStorage extends ControllerBase {
     }
     $body = json_decode($request->getContent(), TRUE);
     $nid = $body['nodeId'];
-    if (!$nid) {
-      return new JsonResponse('Unable to create annotation due to no node ID being passed.', 500);
+    if (!$nid || !is_numeric($nid)) {
+      return new JsonResponse('Unable to create annotation due to no valid node ID being passed.', 500);
     }
     self::createAnnotationNode($body, $nid);
     return new JsonResponse('Annotation created successfully.', 200);
