@@ -54,16 +54,20 @@
   align-items: center;
   padding: 8px 4px;
   border: 1px solid #e5e5e5 !important;
-  cursor: pointer !important;
   -webkit-user-select: none; /* Safari */
   -ms-user-select: none; /* IE 10 and IE 11 */
   user-select: none; /* Standard syntax */
   font-size: 12px;
-  height: var(--sp2);
+  height: 45px;
 }
 
 .r6o-tag-option:hover {
   background-color: #eeebeb;
+}
+
+.r6o-tag-option:hover .r6o-tag-add,
+.r6o-tag-option:hover .r6o-tag-remove {
+  text-decoration: underline;
 }
 
 .r6o-tag-option:hover .r6o-btn {

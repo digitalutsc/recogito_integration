@@ -97,6 +97,15 @@ class AnnotationStorage extends ControllerBase {
     );
   }
 
+  /**
+   * Validate the style for an annotation.
+   *
+   * @param array $style
+   *   The style to validate.
+   *
+   * @return array
+   *   The validated style.
+   */
   public function validateStyle(array $style) {
     $colorRegex = '/^#(?:[0-9a-fA-F]{3}){1,2}$/';
     $lineStyles = ['dotted', 'dashed', 'double', 'solid', 'groove', 'ridge', 'inset', 'outset', 'none'];
@@ -388,7 +397,7 @@ class AnnotationStorage extends ControllerBase {
    *   The paragraph reference set of the textual body node.
    */
   public function createTextualbody(array $textualbody) {
-    if (!$textualbody['modified']) {
+    if (!isset($textualbody['modified'])) {
       $textualbody['modified'] = $textualbody['created'];
     }
     $params = [
@@ -547,7 +556,7 @@ class AnnotationStorage extends ControllerBase {
     $paragraph->set('created', time());
     $paragraph->set('field_annotation_purpose', $textualbody['purpose']);
     $paragraph->set('field_annotation_date_created', $textualbody['created']);
-    if (!$textualbody['modified']) {
+    if (!isset($textualbody['modified'])) {
       $textualbody['modified'] = $textualbody['created'];
     }
     $paragraph->set('field_annotation_last_modified', $textualbody['modified']);

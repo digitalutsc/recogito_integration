@@ -94,6 +94,7 @@ function recogito_integration_page_attachments(array &$attachments) {
           'underline_color' => $style[0]['underline_color'],
           'background_transparency' => $style[0]['background_transparency'],
         ];
+        $result['style'] = recogito_integration_validate_style($result['style']);
         $termStyleList[] = $result;
       }
     }
@@ -282,6 +283,28 @@ function recogito_integration_preprocess_views_view_field(array &$variables) {
       '#markup' => $variables['output'],
     ];
   }
+}
+
+/**
+ * Validate the style for an annotation.
+ *
+ * @param array $style
+ *   The style to validate.
+ *
+ * @return array
+ *   The validated style.
+ */
+function recogito_integration_validate_style(array $style) {
+  $colorRegex = '/^#(?:[0-9a-fA-F]{3}){1,2}$/';
+  $lineStyles = ['dotted', 'dashed', 'double', 'solid', 'groove', 'ridge', 'inset', 'outset', 'none'];
+  $config = \Drupal::config('recogito_integration.settings');
+  $style['text_color'] = preg_match($colorRegex, $style['text_color']) ? $style['text_color'] : ($config->get('recogito_integration.text_color') ?? '#000000');
+  $style['background_color'] = preg_match($colorRegex, $style['background_color']) ? $style['background_color'] : ($config->get('recogito_integration.background_color') ?? '#000000');
+  $style['underline_color'] = preg_match($colorRegex, $style['underline_color']) ? $style['underline_color'] : ($config->get('recogito_integration.underline_color') ?? '#000000');
+  $style['underline_style'] = in_array($style['underline_style'], $lineStyles) ? $style['underline_style'] : ($config->get('recogito_integration.underline_style') ?? 'none');
+  $style['underline_stroke'] = is_numeric($style['underline_stroke']) ? $style['underline_stroke'] : ($config->get('recogito_integration.underline_stroke') ?? '0');
+  $style['background_transparency'] = is_numeric($style['background_transparency']) ? $style['background_transparency'] : ($config->get('recogito_integration.background_transparency') ?? '0');
+  return $style;
 }
 
 /**

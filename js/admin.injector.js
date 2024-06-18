@@ -549,17 +549,27 @@ function attachTagSelector(tags) {
     }
     tagList.append(option);
 
-    option.on('click', function(event) {
-      event.preventDefault();
+    addOption.on('click', function(event) {
+      event.stopPropagation();
       if (addOption.is(':visible')) {
         addOption.hide();
         removeOption.show();
         submitTag(tagEntry, value['name']);
-      } else if (removeOption.is(':visible')) {
+      }
+    });
+
+    removeOption.on('click', function(event) {
+      event.stopPropagation();
+      if (removeOption.is(':visible')) {
         removeOption.hide();
         addOption.show();
         removeTag(value['name']);
       }
+    });
+
+    option.on('click', function(event) {
+      event.preventDefault();
+      event.stopPropagation();
     });
   });
 
