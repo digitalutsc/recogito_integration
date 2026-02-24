@@ -240,6 +240,7 @@ function attachWrapperOk(btnText = 'Annotate') {
       }, 1);
     });
   });
+  if (footer.find(`.ok-annotation:contains("${btnText}")`).length > 0) return;
   footer.append(wrapperOk);
 }
 
@@ -589,7 +590,9 @@ function attachTagSelector(tags) {
     }
   });
 
-  $('#page').find('.r6o-autocomplete div').first().append(button).append(selector);
+  if ($('#page').find('.r6o-autocomplete div').first().find(':contains("Select Tag to Add")').length === 0) {
+    $('#page').find('.r6o-autocomplete div').first().append(button).append(selector);
+  }
 }
 
 /**
