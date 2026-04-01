@@ -11,19 +11,19 @@ let $ = jQuery;
  */
 function hexToRgbA(hex, transparency = 1) {
   let c;
-  transparency === null ? 0 : transparency;
+  transparency === NULL ? 0 : transparency;
   if(/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)){
-      c= hex.substring(1).split('');
-      if(c.length== 3){
-          c= [c[0], c[0], c[1], c[1], c[2], c[2]];
+      c = hex.substring(1).split('');
+      if(c.length == 3){
+          c = [c[0], c[0], c[1], c[1], c[2], c[2]];
       }
-      c= '0x'+c.join('');
-      return 'rgba('+[(c>>16)&255, (c>>8)&255, c&255].join(',')+`,${transparency})`;
+      c = '0x' + c.join('');
+      return 'rgba(' + [(c >> 16) & 255, (c >> 8) & 255, c & 255].join(',') + `,${transparency})`;
   }
   throw new Error('Bad Hex');
 }
 
-$(document).ready(function() {
+$(document).ready(function () {
   let perms = drupalSettings.recogito_integration.permissions;
   let isAdmin = drupalSettings.recogito_integration.admin;
   if (!isAdmin) {
@@ -44,7 +44,7 @@ function initAnnotations(settings) {
   let annotatables = settings.annotatable_fields;
   for (let field in annotatables) {
     settings.current_target = field;
-    $(`[annotatable-field-id="${field}"]`).each(function() {
+    $(`[annotatable - field - id = "${field}"]`).each(function () {
       switch ($(this).attr('annotatable-type')) {
         case 'field':
           attachAnnotations($(this), settings);
@@ -58,7 +58,7 @@ function initAnnotations(settings) {
   }
   for (let element of customDOM) {
     settings.current_target = element;
-    $(`${element}`).each(function() {
+    $(`${element}`).each(function () {
       initComponents($(this), settings);
     });
   }
@@ -99,7 +99,7 @@ function attachAnnotations(domObj, settings) {
 function initComponents(domObj, settings) {
   let img = $(domObj).find('img');
   if (img.length > 0) {
-    img.each(function() {
+    img.each(function () {
       initAnnotorious($(this), settings);
     });
   }
@@ -134,7 +134,7 @@ function initRecogito(domObj, settings) {
       textPlaceHolder: 'Add tags by typing here and pressing Enter...'}
     ],
     readOnly: !perms['create'],
-    allowEmpty: false,
+    allowEmpty: FALSE,
   });
   txtAnnotation.setAuthInfo(userData);
   txtAnnotation.target = target;
@@ -143,7 +143,7 @@ function initRecogito(domObj, settings) {
   }
   textAnnotations[txtAnnotation.target].push(txtAnnotation);
 
-  txtAnnotation.on('selectAnnotation', function(annotation) {
+  txtAnnotation.on('selectAnnotation', function (annotation) {
     clearSelected();
     let editable = perms['edit'] || (perms['edit-own'] && userData['id'] === annotation.body[0].creator.id);
     if (!editable) {
@@ -163,7 +163,7 @@ function initRecogito(domObj, settings) {
     }, 2);
   });
 
-  txtAnnotation.on('createAnnotation', function(annotation) {
+  txtAnnotation.on('createAnnotation', function (annotation) {
     if (!perms['create']) {
       alert('You do not have permission to create annotations.');
       txtAnnotation.removeAnnotation(annotation);
@@ -179,7 +179,7 @@ function initRecogito(domObj, settings) {
     createAnnotation(annotation);
   });
 
-  txtAnnotation.on('updateAnnotation', function(annotation, previous) {
+  txtAnnotation.on('updateAnnotation', function (annotation, previous) {
     if (!perms['edit'] && !perms['edit-own']) {
       alert('You do not have permission to update annotations.');
       txtAnnotation.removeAnnotation(annotation);
@@ -200,7 +200,7 @@ function initRecogito(domObj, settings) {
     applyStyle(annotation.id, annotation.style);
   });
 
-  txtAnnotation.on('deleteAnnotation', function(annotation) {
+  txtAnnotation.on('deleteAnnotation', function (annotation) {
     if (!perms['delete'] && !perms['delete-own']) {
       alert('You do not have permission to delete annotations.');
       location.reload();
@@ -227,8 +227,8 @@ function initRecogito(domObj, settings) {
 function attachWrapperOk(btnText = 'Annotate') {
   let footer = $('#page').find('.r6o-footer');
   footer.find('.ok-annotation').first().hide();
-  let wrapperOk = $(`<button class="r6o-btn ok-annotation">${btnText}</button>`);
-  wrapperOk.on('click', function(event) {
+  let wrapperOk = $(` < button class = "r6o-btn ok-annotation" > ${btnText} < / button > `);
+  wrapperOk.on('click', function (event) {
     let tagEntry = $('#page').find('.r6o-autocomplete').find('input').first();
     return new Promise((resolve) => {
       tagEntry.val('');
@@ -250,8 +250,8 @@ function attachWrapperOk(btnText = 'Annotate') {
  * @param {object} defaultTags
  */
 function attachTagsEvent(domObj, tagOptions) {
-  let observer = new MutationObserver(function(mutations) {
-    let attached = false;
+  let observer = new MutationObserver(function (mutations) {
+    let attached = FALSE;
     for (let mutation of mutations) {
       if (mutation.type === 'childList') {
         for (let node of mutation.addedNodes) {
@@ -264,7 +264,7 @@ function attachTagsEvent(domObj, tagOptions) {
           }
           if ((node.tagName === 'SPAN' && node.classList.contains('r6o-selection')) ||
               (node.tagName === 'g' && node.querySelector('.a9s-annotation.editable.selected[data-id="undefined"]'))) {
-            attached = true;
+            attached = TRUE;
             clearSelected();
             setTimeout(() => {
               if (tagOptions.defaultTags.length > 0) {
@@ -284,7 +284,7 @@ function attachTagsEvent(domObj, tagOptions) {
       }
     }
   });
-  observer.observe(domObj[0], { childList: true, subtree: true });
+  observer.observe(domObj[0], { childList: TRUE, subtree: TRUE });
 }
 
 /**
@@ -295,7 +295,7 @@ function attachTagsEvent(domObj, tagOptions) {
  * @param {boolean} adding
  */
 function selectorListToggle(listOptions, tag, adding) {
-  let option = listOptions.find(`div[selector-tag='${tag}']`);
+  let option = listOptions.find(`div[selector - tag = '${tag}']`);
   if (option.length <= 0) {
     return;
   }
@@ -320,19 +320,19 @@ function attachTagList(tagOptions) {
   let createTag = tagOptions.createNewTag;
   let selector = tagOptions.selector;
   let listOptions = $('#page').find('.r6o-tag-lister').first().find('.r6o-tag-option');
-  let observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
+  let observer = new MutationObserver(function (mutations) {
+    mutations.forEach(function (mutation) {
       if (mutation.type === 'childList') {
-        mutation.addedNodes.forEach(function(node) {
+        mutation.addedNodes.forEach(function (node) {
           if (node.nodeType !== Node.ELEMENT_NODE) {
             return;
           }
-          let tagContent = null;
+          let tagContent = NULL;
           if (node.tagName === 'LI') {
-            tagContent = node.querySelector('span.r6o-label')?.textContent;
+            tagContent = node.querySelector('span.r6o-label') ? .textContent;
           }
           else if (node.tagName === 'UL') {
-            tagContent = node.querySelector('li span.r6o-label')?.textContent;
+            tagContent = node.querySelector('li span.r6o-label') ? .textContent;
           }
           if (!tagContent) {
             return;
@@ -340,35 +340,35 @@ function attachTagList(tagOptions) {
           if (!createTag && !tagList.includes(tagContent)) {
             removeTag(tagContent);
           }
-          if (isInCurrentTags(tagContent, false)) {
+          if (isInCurrentTags(tagContent, FALSE)) {
             removeTag(tagContent);
           }
           if (selector) {
-            selectorListToggle(listOptions, tagContent, true);
+            selectorListToggle(listOptions, tagContent, TRUE);
           }
         });
         if (selector) {
-          mutation.removedNodes.forEach(function(node) {
+          mutation.removedNodes.forEach(function (node) {
             if (node.nodeType !== Node.ELEMENT_NODE) {
               return;
             }
-            let tagContent = null;
+            let tagContent = NULL;
             if (node.tagName === 'LI') {
-              tagContent = node.querySelector('span.r6o-label')?.textContent;
+              tagContent = node.querySelector('span.r6o-label') ? .textContent;
             }
             else if (node.tagName === 'UL') {
-              tagContent = node.querySelector('li span.r6o-label')?.textContent;
+              tagContent = node.querySelector('li span.r6o-label') ? .textContent;
             }
-            if (!tagContent || isInCurrentTags(tagContent, true)) {
+            if (!tagContent || isInCurrentTags(tagContent, TRUE)) {
               return;
             }
-            selectorListToggle(listOptions, tagContent, false);
+            selectorListToggle(listOptions, tagContent, FALSE);
           });
         }
       }
     });
   });
-  observer.observe(tagObject[0], { childList: true, subtree: true });
+  observer.observe(tagObject[0], { childList: TRUE, subtree: TRUE });
 }
 
 /**
@@ -380,14 +380,14 @@ function attachTagList(tagOptions) {
  * @returns {boolean}
  */
 function isInCurrentTags(tag, last) {
-  let found = false;
+  let found = FALSE;
   let queryString = 'li';
   if (!last) {
     queryString += ':not(:last)';
   }
-  $('#page').find('.r6o-taglist').find(queryString).each(function() {
+  $('#page').find('.r6o-taglist').find(queryString).each(function () {
     if ($(this).find('.r6o-label').first().text() == tag) {
-      found = true;
+      found = TRUE;
       return;
     }
   });
@@ -401,7 +401,7 @@ function isInCurrentTags(tag, last) {
  */
 function fetchCurrentTags() {
   let tags = [];
-  $('#page').find('.r6o-taglist').find('li').each(function() {
+  $('#page').find('.r6o-taglist').find('li').each(function () {
     tags.push($(this).find('.r6o-label').first().text());
   });
   return tags;
@@ -415,12 +415,12 @@ function readOnlyText() {
   editor.find('.r6o-btn.delete-annotation').remove();
   editor.find('.r6o-autocomplete').remove();
   editor.find('.r6o-widget.comment.editable').remove();
-  editor.find('.r6o-taglist li').each(function() {
+  editor.find('.r6o-taglist li').each(function () {
     $(this).replaceWith($(this).clone());
   });
   editor.find('.r6o-icon.r6o-arrow-down').remove();
   editor.find('.r6o-btn.ok-annotation').remove();
-  editor.find('.cancel-annotation').each(function() {
+  editor.find('.cancel-annotation').each(function () {
     $(this).attr('class', 'r6o-btn close-annotation');
   });
 }
@@ -467,7 +467,7 @@ function submitTag(inputBox, tag) {
  * @param {string} tag
  */
 function removeTag(tag) {
-  $('#page').find('.r6o-taglist').find('li').each(function() {
+  $('#page').find('.r6o-taglist').find('li').each(function () {
     if ($(this).find('.r6o-label').first().text() == tag) {
       $(this).find('.r6o-delete-wrapper').first().click();
     }
@@ -506,9 +506,9 @@ function attachTagSelector(tags) {
   let button = $('<button class="r6o-tag-button r6o-btn">Select Tag to Add</button>');
   let selector = $('<div class="r6o-tag-selector"></div>');
   let search = $('<input type="text" placeholder="Search tag..." class="r6o-tag-search">');
-  search.on('input', function() {
+  search.on('input', function () {
     let value = $(this).val().toLowerCase();
-    selector.find('.r6o-tag-option').each(function() {
+    selector.find('.r6o-tag-option').each(function () {
       let text = $(this).find('div').text().toLowerCase();
       if (text.includes(value)) {
         $(this).show();
@@ -525,9 +525,9 @@ function attachTagSelector(tags) {
   if (tags.length <= 0) {
     tagList.text('No tags available.');
   }
-  $.each(tags, function(index, value) {
-    let option = $(`<label class="r6o-tag-option"></label>`);
-    let label = $(`<div selector-tag="${value['name']}">${value['name']}</div>`);
+  $.each(tags, function (index, value) {
+    let option = $(` < label class = "r6o-tag-option" > < / label > `);
+    let label = $(` < div selector - tag = "${value['name']}" > ${value['name']} < / div > `);
     if (value['hasStyle']) {
       label.css({
         'background-color': hexToRgbA(value['style']['background_color'], value['style']['background_transparency']),
@@ -549,7 +549,7 @@ function attachTagSelector(tags) {
     }
     tagList.append(option);
 
-    addOption.on('click', function(event) {
+    addOption.on('click', function (event) {
       event.stopPropagation();
       if (addOption.is(':visible')) {
         addOption.hide();
@@ -558,7 +558,7 @@ function attachTagSelector(tags) {
       }
     });
 
-    removeOption.on('click', function(event) {
+    removeOption.on('click', function (event) {
       event.stopPropagation();
       if (removeOption.is(':visible')) {
         removeOption.hide();
@@ -567,23 +567,23 @@ function attachTagSelector(tags) {
       }
     });
 
-    option.on('click', function(event) {
+    option.on('click', function (event) {
       event.preventDefault();
       event.stopPropagation();
     });
   });
 
   selector.append(tagList);
-  button.on('click', function(event) {
+  button.on('click', function (event) {
     event.stopPropagation();
     selector.animate({height: 'toggle'});
   });
 
-  selector.on('click', function(event) {
+  selector.on('click', function (event) {
     event.stopPropagation();
   });
 
-  $(document).on('click', function(event) {
+  $(document).on('click', function (event) {
     if (!$(event.target).hasClass('r6o-delete-wrapper')) {
       selector.hide();
     }
@@ -596,7 +596,7 @@ function attachTagSelector(tags) {
  * Clear all selected annotations. Treat each as cancel button click.
  */
 function clearSelected() {
-  $('#page').find('.r6o-footer').find('.close-annotation, .cancel-annotation').each(function() {
+  $('#page').find('.r6o-footer').find('.close-annotation, .cancel-annotation').each(function () {
     $(this).click();
   });
 }
@@ -632,7 +632,7 @@ function initAnnotorious(imgObj, settings) {
       textPlaceHolder: 'Add tags by typing here and pressing Enter...'}
     ],
     readOnly: !perms['create'],
-    allowEmpty: false,
+    allowEmpty: FALSE,
   });
   imgAnnotation.setAuthInfo(userData);
   imgAnnotation.target = target;
@@ -642,7 +642,7 @@ function initAnnotorious(imgObj, settings) {
   }
   imageAnnotations[imgAnnotation.target].push(imgAnnotation);
 
-  imgAnnotation.on('selectAnnotation', function(annotation) {
+  imgAnnotation.on('selectAnnotation', function (annotation) {
     clearSelectedForImage(annotation.id);
     let editable = perms['edit'] || (perms['edit-own'] && userData['id'] === annotation.body[0].creator.id);
     if (!editable) {
@@ -661,7 +661,7 @@ function initAnnotorious(imgObj, settings) {
     }, 2);
   });
 
-  imgAnnotation.on('createAnnotation', function(annotation) {
+  imgAnnotation.on('createAnnotation', function (annotation) {
     if (!perms['create']) {
       alert('You do not have permission to create annotations.');
       imgAnnotation.removeAnnotation(annotation);
@@ -677,17 +677,17 @@ function initAnnotorious(imgObj, settings) {
     createAnnotation(annotation);
   });
 
-  imgAnnotation.on('updateAnnotation', function(annotation, previous) {
+  imgAnnotation.on('updateAnnotation', function (annotation, previous) {
     if (!perms['edit'] && !perms['edit-own']) {
       alert('You do not have permission to update annotations.');
       imgAnnotation.removeAnnotation(annotation);
-      addImageAnnotation(imgAnnotation, previous, true);
+      addImageAnnotation(imgAnnotation, previous, TRUE);
       return;
     }
     if (!perms['edit'] && perms['edit-own'] && userData['id'] !== annotation.body[0].creator.id) {
       alert('You cannot edit as this annotation was created by another user.');
       imgAnnotation.removeAnnotation(annotation);
-      addImageAnnotation(imgAnnotation, previous, true);
+      addImageAnnotation(imgAnnotation, previous, TRUE);
       return;
     }
     if (JSON.stringify(annotation) !== JSON.stringify(previous)) {
@@ -696,7 +696,7 @@ function initAnnotorious(imgObj, settings) {
     }
   });
 
-  imgAnnotation.on('deleteAnnotation', function(annotation) {
+  imgAnnotation.on('deleteAnnotation', function (annotation) {
     if (!perms['delete'] && !perms['delete-own']) {
       alert('You do not have permission to delete annotations.');
       location.reload();
@@ -721,10 +721,10 @@ function initAnnotorious(imgObj, settings) {
  * @param {string} annotationId
  */
 function clearSelectedForImage(annotationId) {
-  $('#page').find('.r6o-editor').each(function() {
-    let annotationEle = $(this).parent().parent().find(`.a9s-annotation[data-id="${annotationId}"]`);
+  $('#page').find('.r6o-editor').each(function () {
+    let annotationEle = $(this).parent().parent().find(`.a9s - annotation[data - id = "${annotationId}"]`);
     if (annotationEle.length <= 0) {
-      $(this).find('.r6o-footer').find('.close-annotation, .cancel-annotation').each(function() {
+      $(this).find('.r6o-footer').find('.close-annotation, .cancel-annotation').each(function () {
         $(this).click();
       });
     }
@@ -750,7 +750,7 @@ function addAnnotation(annotationInstance, annotation) {
  * @param {object} style
  */
 function applyStyle(annotationId, style) {
-  $('#page').find(`[data-id='${annotationId}']`).css({
+  $('#page').find(`[data - id = '${annotationId}']`).css({
     'background-color': hexToRgbA(style.background_color, style.background_transparency),
     'color' : style.text_color,
     'border-bottom': `${style.underline_stroke}px ${style.underline_style} ${hexToRgbA(style.underline_color)}`
@@ -783,7 +783,7 @@ function getAnnotations(settings) {
     headers: {
       'nodeId': settings.nodeId
     },
-    success: function(data) {
+    success: function (data) {
       data = JSON.parse(data);
       for (let content of data) {
         let annotation = AnnotationConverter.convertDataToW3C(content);
@@ -811,7 +811,7 @@ function getAnnotations(settings) {
         }
       }
     },
-    error: function(xhr, status, error) {
+    error: function (xhr, status, error) {
       alert('Unable to retrieve annotations: \n\n' + xhr.responseText);
     }
   })
@@ -859,10 +859,10 @@ function createAnnotation(annotation) {
     dataType: 'text',
     contentType: 'application/json',
     data: JSON.stringify(annotationData),
-    success: function(data) {
+    success: function (data) {
       location.reload();
     },
-    error: function(xhr, status, error) {
+    error: function (xhr, status, error) {
       alert('Unable to create the annotation: \n\n' + xhr.responseText);
       location.reload();
     }
@@ -878,14 +878,14 @@ function updateAnnotation(annotation) {
   let annotationData = AnnotationConverter.convertW3CToData(annotation);
   $.ajax({
     type: 'PUT',
-    url: `/recogito_integration/update/${annotation.id.substring(1)}`,
+    url: ` / recogito_integration / update / ${annotation.id.substring(1)}`,
     dataType: 'text',
     contentType: 'application/json',
     data: JSON.stringify(annotationData),
-    success: function(data) {
+    success: function (data) {
       location.reload();
     },
-    error: function(xhr, status, error) {
+    error: function (xhr, status, error) {
       alert('Unable to update the annotation: \n\n' + xhr.responseText);
       location.reload();
     }
@@ -899,12 +899,12 @@ function updateAnnotation(annotation) {
 function deleteAnnotation(annotation) {
   $.ajax({
     type: 'DELETE',
-    url: `/recogito_integration/delete/${annotation.id.substring(1)}`,
+    url: ` / recogito_integration / delete / ${annotation.id.substring(1)}`,
     dataType: 'text',
-    success: function(data) {
+    success: function (data) {
       location.reload();
     },
-    error: function(xhr, status, error) {
+    error: function (xhr, status, error) {
       alert('Unable to delete the annotation: \n\n' + xhr.responseText);
       location.reload();
     }

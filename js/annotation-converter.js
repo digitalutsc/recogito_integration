@@ -1,4 +1,4 @@
-var AnnotationConverter = (function() {
+var AnnotationConverter = (function () {
   /**
    * Convert a W3C annotation to a data compatible with database.
    *
