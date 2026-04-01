@@ -1,0 +1,15 @@
+name: CI
+
+on:
+  push:
+    branches: [ 2.0.x ]
+  pull_request:
+    branches: [ 2.0.x ]
+  workflow_dispatch:
+
+jobs:
+  islandora-module-ci:
+    uses: digitalutsc/reusable_workflows/.github/workflows/islandora-module-ci.yml@main
+    with:
+      module_name: recogito_integration
+      install_chromedriver: true
