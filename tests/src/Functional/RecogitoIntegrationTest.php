@@ -27,6 +27,10 @@ class RecogitoIntegrationTest extends BrowserTestBase {
    * Perform initial setup tasks that run before every test method.
    */
   public function setUp(): void {
+    // This is currently a workaround to prevent this class from running.
+    // Since no test method is implemented, PHPUnit will throw a warning.
+    $this->markTestSkipped('Skipping due to missing test cases.');
+
     parent::setUp();
     $this->user = $this->drupalCreateUser([
       'administer site configuration',
@@ -38,6 +42,15 @@ class RecogitoIntegrationTest extends BrowserTestBase {
       'recogito delete annotations',
       'recogito delete own annotations',
     ]);
+  }
+
+  /**
+   * Placeholder to prevent PHPUnit warnings until tests are implemented.
+   *
+   * @todo Implement actual functional test logic and remove this placeholder.
+   */
+  public function testPlaceholder(): void {
+    $this->markTestSkipped('Tests for Recogito Integration are not yet implemented.');
   }
 
 }
