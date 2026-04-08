@@ -11,19 +11,19 @@ let $ = jQuery;
  */
 function hexToRgbA(hex, transparency = 1) {
   let c;
-  transparency === NULL ? 0 : transparency;
+  transparency === null ? 0 : transparency;
   if(/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)){
-      c = hex.substring(1).split('');
-      if(c.length == 3){
-          c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+      c= hex.substring(1).split('');
+      if(c.length== 3){
+          c= [c[0], c[0], c[1], c[1], c[2], c[2]];
       }
-      c = '0x' + c.join('');
-      return 'rgba(' + [(c >> 16) & 255, (c >> 8) & 255, c & 255].join(',') + `,${transparency})`;
+      c= '0x'+c.join('');
+      return 'rgba('+[(c>>16)&255, (c>>8)&255, c&255].join(',')+`,${transparency})`;
   }
   throw new Error('Bad Hex');
 }
 
-$(document).ready(function () {
+$(document).ready(function() {
   let perms = drupalSettings.recogito_integration.permissions;
   if (perms['view']) {
     initAnnotations(drupalSettings.recogito_integration);
@@ -40,7 +40,7 @@ function initAnnotations(settings) {
   let annotatables = settings.annotatable_fields;
   for (let field in annotatables) {
     settings.current_target = field;
-    $(`[annotatable - field - id = "${field}"]`).each(function () {
+    $(`[annotatable-field-id="${field}"]`).each(function() {
       switch ($(this).attr('annotatable-type')) {
         case 'field':
           attachAnnotations($(this), settings);
@@ -54,7 +54,7 @@ function initAnnotations(settings) {
   }
   for (let element of customDOM) {
     settings.current_target = element;
-    $(`${element}`).each(function () {
+    $(`${element}`).each(function() {
       initComponents($(this), settings);
     });
   }
@@ -95,7 +95,7 @@ function attachAnnotations(domObj, settings) {
 function initComponents(domObj, settings) {
   let img = $(domObj).find('img');
   if (img.length > 0) {
-    img.each(function () {
+    img.each(function() {
       initAnnotorious($(this), settings);
     });
   }
@@ -117,7 +117,7 @@ function initRecogito(domObj, settings) {
       'COMMENT',
       'TAG',
     ],
-    readOnly: TRUE
+    readOnly: true
   });
   txtAnnotation.target = target;
   if (!textAnnotations[txtAnnotation.target]) {
@@ -125,7 +125,7 @@ function initRecogito(domObj, settings) {
   }
   textAnnotations[txtAnnotation.target].push(txtAnnotation);
 
-  txtAnnotation.on('selectAnnotation', function (annotation) {
+  txtAnnotation.on('selectAnnotation', function(annotation) {
     clearSelected();
   });
 }
@@ -135,7 +135,7 @@ function initRecogito(domObj, settings) {
  */
 function clearSelected() {
   $('#page').find('.r6o-footer').find('.close-annotation, .cancel-annotation').each(
-    function () {
+    function() {
       $(this).click();
     }
   );
@@ -156,7 +156,7 @@ function initAnnotorious(imgObj, settings) {
       'COMMENT',
       'TAG',
     ],
-    readOnly: TRUE
+    readOnly: true
   });
   imgAnnotation.target = target;
   imgAnnotation.targetSrc = imgObj[0]['src'];
@@ -165,7 +165,7 @@ function initAnnotorious(imgObj, settings) {
   }
   imageAnnotations[imgAnnotation.target].push(imgAnnotation);
 
-  imgAnnotation.on('selectAnnotation', function (annotation) {
+  imgAnnotation.on('selectAnnotation', function(annotation) {
     clearSelectedForImage(annotation.id);
   });
 }
@@ -175,11 +175,11 @@ function initAnnotorious(imgObj, settings) {
  */
 function clearSelectedForImage(annotationId) {
   $('#page').find('.r6o-editor').each(
-    function () {
-      let annotationEle = $(this).parent().parent().find(`.a9s - annotation[data - id = "${annotationId}"]`);
+    function() {
+      let annotationEle = $(this).parent().parent().find(`.a9s-annotation[data-id="${annotationId}"]`);
       if (annotationEle.length <= 0) {
         $(this).find('.r6o-footer').find('.close-annotation, .cancel-annotation').each(
-          function () {
+          function() {
             $(this).click();
           }
         );
@@ -207,7 +207,7 @@ function addAnnotation(annotationInstance, annotation) {
  * @param {object} style
  */
 function applyStyle(annotationId, style) {
-  $('#page').find(`[data - id = '${annotationId}']`).css({
+  $('#page').find(`[data-id='${annotationId}']`).css({
     'background-color': hexToRgbA(style.background_color, style.background_transparency),
     'color' : style.text_color,
     'border-bottom': `${style.underline_stroke}px ${style.underline_style} ${hexToRgbA(style.underline_color)}`
@@ -238,7 +238,7 @@ function getAnnotations(settings) {
     headers: {
       'nodeId': settings.nodeId
     },
-    success: function (data) {
+    success: function(data) {
       data = JSON.parse(data);
       for (let content of data) {
         let annotation = AnnotationConverter.convertDataToW3C(content);
@@ -257,7 +257,7 @@ function getAnnotations(settings) {
             if (imageAnnotations[annotation.target_element]) {
               for (let annotationInstance of imageAnnotations[annotation.target_element]) {
                 if (annotationInstance.targetSrc === annotation.target.source) {
-                  addImageAnnotation(annotationInstance, annotation, TRUE);
+                  addImageAnnotation(annotationInstance, annotation, true);
                 }
               }
             }
@@ -265,7 +265,7 @@ function getAnnotations(settings) {
         }
       }
     },
-    error: function (xhr, status, error) {
+    error: function(xhr, status, error) {
       alert('Unable to retrieve annotations: \n\n' + xhr.responseText);
     }
   })
